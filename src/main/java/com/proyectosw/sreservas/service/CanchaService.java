@@ -3,7 +3,9 @@ package com.proyectosw.sreservas.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.proyectosw.sreservas.model.Cancha;
 import com.proyectosw.sreservas.repository.CanchaRepository;
@@ -26,12 +28,12 @@ public class CanchaService {
 
     @Transactional
     public Cancha crear(Cancha cancha) {
-        // Validación de negocio mínima (los @NotBlank no existen acá)
+        
         if (cancha.getNombre() == null || cancha.getNombre().isBlank()) {
-            throw new RuntimeException("El nombre de la cancha es obligatorio");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El nombre de la cancha es obligatorio");
         }
         if (cancha.getPrecioPorHora() == null || cancha.getPrecioPorHora().signum() <= 0) {
-            throw new RuntimeException("El precio por hora debe ser mayor a cero");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El precio por hora debe ser mayor a cero");
         }
         return repository.save(cancha);
     }
@@ -39,7 +41,8 @@ public class CanchaService {
     @Transactional
     public Cancha actualizar(Integer id, Cancha datos) {
         Cancha existente = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cancha no encontrada con id " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No existe la cancha con id " + id));
         if (datos.getNombre() != null) existente.setNombre(datos.getNombre());
         if (datos.getDeporte() != null) existente.setDeporte(datos.getDeporte());
         if (datos.getPrecioPorHora() != null) existente.setPrecioPorHora(datos.getPrecioPorHora());
@@ -49,6 +52,10 @@ public class CanchaService {
 
     @Transactional
     public void eliminar(Integer id) { 
+        if (!repository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "No existe la cancha con id " + id);
+        }
         repository.deleteById(id); 
     }
     

@@ -3,7 +3,10 @@ package com.proyectosw.sreservas.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.proyectosw.sreservas.model.Usuario;
 import com.proyectosw.sreservas.repository.UsuarioRepository;
@@ -15,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor 
 public class UsuarioService {
     private final UsuarioRepository repository;
+    private final PasswordEncoder passwordEncoder;
 
     public List<Usuario> listarTodos() {
         return repository.findAll();
@@ -26,24 +30,31 @@ public class UsuarioService {
 
     @Transactional 
     public Usuario crear(Usuario usuario) {
+        usuario.setClave(passwordEncoder.encode(usuario.getClave()));
         return repository.save(usuario);
     }
 
     @Transactional
     public Usuario actualizar(Integer id, Usuario datos) {
         Usuario existente = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No existe el usuario con id " + id));
 
         existente.setNombres(datos.getNombres());
         existente.setApellidos(datos.getApellidos());
         existente.setCorreo(datos.getCorreo());
-        existente.setClave(datos.getClave());
+        if (datos.getClave() != null)
+            existente.setClave(passwordEncoder.encode(datos.getClave()));
 
         return repository.save(existente);
     }
 
     @Transactional
     public void eliminar(Integer id) {
+        if (!repository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "No existe el usuario con id " + id);
+        }
         repository.deleteById(id);
     }
 }

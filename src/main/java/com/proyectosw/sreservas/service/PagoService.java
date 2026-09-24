@@ -4,7 +4,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.proyectosw.sreservas.model.Pago;
 import com.proyectosw.sreservas.model.Reserva;
@@ -32,11 +34,12 @@ public class PagoService {
     @Transactional 
     public Pago crear(Pago pago) {
         if (pago.getReserva() == null || pago.getReserva().getId() == null) {
-            throw new RuntimeException("El pago debe referenciar una reserva");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El pago debe referenciar una reserva");
         }
 
         Reserva reserva = reservaRepository.findById(pago.getReserva().getId())
-                .orElseThrow(() -> new RuntimeException("Reserva no encontrada con id " + pago.getReserva().getId()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No existe la reserva con id " + pago.getReserva().getId()));
         pago.setReserva(reserva);
 
         pago.setMonto(reserva.getMontoTotal());           
@@ -49,13 +52,18 @@ public class PagoService {
     @Transactional
     public Pago actualizar(Integer id, Pago datos) {
         Pago existente = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pago no encontrado con id " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No existe el pago con id " + id));
         if (datos.getMetodoPago() != null) existente.setMetodoPago(datos.getMetodoPago());
         return repository.save(existente);
     }
 
     @Transactional
     public void eliminar(Integer id) { 
+        if (!repository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "No existe el pago con id " + id);
+        }
         repository.deleteById(id); 
     }
 }
