@@ -1,7 +1,9 @@
 <section class="page">
   <app-page-header title="Clientes" subtitle="Usuarios registrados en el sistema">
     <mat-chip-set>
-      <mat-chip>{{ puedeGestionar() ? 'Datos reales' : 'Solo lectura' }}</mat-chip>
+      @if (!puedeGestionar()) {
+        <mat-chip>Solo lectura</mat-chip>
+      }
     </mat-chip-set>
     @if (puedeGestionar()) {
       <a mat-flat-button color="primary" routerLink="/clientes/nueva">

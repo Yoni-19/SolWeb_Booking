@@ -2,11 +2,7 @@
   <app-page-header
     title="Panel principal"
     [subtitle]="'Bienvenido, ' + (nombre() || 'invitado')"
-  >
-    <mat-chip-set>
-      <mat-chip>{{ auth.esCliente() ? 'Mi cuenta' : 'Datos reales' }}</mat-chip>
-    </mat-chip-set>
-  </app-page-header>
+  />
 
   <div class="stat-grid">
     <mat-card class="stat-card">
