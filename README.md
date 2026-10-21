@@ -52,25 +52,29 @@ correr sin duplicar nada.
 
 ## Credenciales de prueba
 
-Las tres cuentas del seed usan la clave `test123`:
+Las cuentas del seed usan la clave `test123`:
 
-| Correo | Nombre |
-|---|---|
-| `admin@email.com` | Admin Sistema |
-| `laura@email.com` | Laura Gomez |
-| `pedro@email.com` | Pedro Diaz |
+| Correo | Rol | Nombre |
+|---|---|---|
+| `admin@email.com` | `ADMIN` | Admin Sistema |
+| `laura@email.com` | `CLIENTE` | Laura Gomez |
+| `pedro@email.com` | `CLIENTE` | Pedro Diaz |
+
+Cualquiera puede registrarse desde `/registro`: el alta siempre nace como `CLIENTE` y un
+`ADMIN` puede ascenderla desde la pantalla de clientes.
 
 ## Reglas de negocio
 
+- **Roles**: `ADMIN` ⊃ `RECEPCIONISTA` ⊃ `CLIENTE`. El JWT solo lleva el correo y el rol se
+  lee de la base en cada request, así que un cambio de rol aplica al instante.
 - **Solapamiento**: `409 Conflict` si una reserva se superpone con otra de la misma cancha.
 - **Monto**: por hora iniciada (`ceil(minutos / 60)`), no por hora exacta.
 - **Contratos**: las respuestas usan DTOs; el hash BCrypt de la clave nunca sale por la API.
 - **CORS**: habilitado solo para `http://localhost:4200` y `http://127.0.0.1:4200`.
 
-El detalle de los endpoints y de los contratos está en `backend/README.md`.
+El detalle de los endpoints y de la matriz de permisos está en `backend/README.md`.
 
 ## Estado actual
 
-Sin roles todavía: `admin@email.com` es un nombre, no un rol, y cualquier usuario logueado
-accede a todo. El plan de roles (ADMIN / RECEPCIONISTA / CLIENTE) y la regla del abono del 50%
-están pendientes de implementación.
+Roles implementados en backend y frontend (menú, rutas, dashboard y formularios por rol).
+Pendiente: la regla del abono del 50% en el módulo de pagos.

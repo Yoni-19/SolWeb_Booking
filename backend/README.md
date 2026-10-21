@@ -34,13 +34,13 @@ La base se inicializa sola: `spring.jpa.hibernate.ddl-auto=update` crea el esque
 
 ## Credenciales de prueba
 
-Las tres cuentas del seed usan la clave `test123`:
+Las tres cuentas del seed usan la clave `test123` y sus roles salen de `data.sql`:
 
 | Correo | Rol |
 |---|---|
-| `admin@email.com` | Admin Sistema |
-| `laura@email.com` | Laura Gomez |
-| `pedro@email.com` | Pedro Diaz |
+| `admin@email.com` | `ADMIN` — Admin Sistema |
+| `laura@email.com` | `CLIENTE` — Laura Gomez |
+| `pedro@email.com` | `CLIENTE` — Pedro Diaz |
 
 ```powershell
 curl -X POST http://localhost:8080/api/auth/login `
@@ -56,14 +56,34 @@ Todos salvo `POST /api/auth/login` y `POST /api/usuarios` (registro) exigen
 | Método | Ruta | Descripción |
 |---|---|---|
 | POST | `/api/auth/login` | Devuelve `{ token }` |
-| GET/POST | `/api/usuarios` | Listar / registrar usuario |
+| GET | `/api/auth/me` | Usuario autenticado con su `rol` |
+| GET/POST | `/api/usuarios` | Listar / registrar usuario (el alta nace `CLIENTE`) |
 | GET/PUT/DELETE | `/api/usuarios/{id}` | Detalle / actualizar (PUT no exige clave) / eliminar |
+| PUT | `/api/usuarios/{id}/rol` | Cambiar el rol (solo `ADMIN`) |
 | GET/POST | `/api/canchas` | Listar / crear cancha |
 | GET/PUT/DELETE | `/api/canchas/{id}` | Detalle / actualizar / eliminar |
 | GET/POST | `/api/reservas` | Listar / crear reserva |
 | GET/PUT/DELETE | `/api/reservas/{id}` | Detalle / actualizar / eliminar |
 | GET/POST | `/api/pagos` | Listar / crear pago |
 | GET/PUT/DELETE | `/api/pagos/{id}` | Detalle / actualizar / eliminar |
+
+## Roles y permisos
+
+El JWT solo lleva el correo: `JwtAuthFilter` carga el usuario en cada request, así que **el rol
+nunca viaja en el token** y un cambio de rol aplica al instante. El frontend lo obtiene con
+`GET /api/auth/me`.
+
+| Acción | ADMIN | RECEPCIONISTA | CLIENTE |
+|---|---|---|---|
+| Ver/crear/editar/eliminar canchas | sí | no | no |
+| Ver clientes | sí | sí | no |
+| Crear/editar/eliminar clientes y cambiar roles | sí | no | no |
+| Ver todas las reservas | sí | sí | solo las propias |
+| Crear reserva | sí | sí | sí (a su nombre) |
+| Editar/eliminar reserva | sí | sí | no |
+| Pagos | sí | sí | no (fase 2) |
+
+Un rol sin permiso recibe `403` con el envelope JSON `{ timestamp, status, error, message }`.
 
 Reglas de negocio implementadas:
 
@@ -72,6 +92,7 @@ Reglas de negocio implementadas:
 - **Monto**: se cobra por hora iniciada (`ceil` de los minutos / 60), no por hora exacta.
 - **Contratos**: las respuestas usan DTOs (`dto/`), nunca las entidades. El hash BCrypt de
   la clave nunca sale por la API.
+- **Último administrador**: no se puede quitar el rol al último `ADMIN` (`409`).
 - **CORS**: habilitado para `http://localhost:4200` y `http://127.0.0.1:4200` (frontend Angular).
 
 ## Gotcha importante: el IDE corrompe el build (Lombok + JDK 25)

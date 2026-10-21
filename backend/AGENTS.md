@@ -53,6 +53,29 @@ Para auditar el bytecode: `javap -c -p -cp target/classes com.proyectosw.sreserv
   `tipo(ámbito): descripción` (`feat`, `fix`, `refactor`, `docs`, `chore`).
 - Java 25 disponible en `C:\Program Files\Eclipse Adoptium\jdk-25.0.1.8-hotspot`.
 
+## Roles y seguridad
+
+- Enum `Rol` (`model/enums/Rol.java`): `ADMIN`, `RECEPCIONISTA`, `CLIENTE`. La columna
+  `usuario.rol` es `varchar(20) not null default 'CLIENTE'`.
+- El JWT **solo lleva el correo**. `JwtAuthFilter` resuelve el usuario desde la base en cada
+  request (`CurrentUserService`), así que los tokens viejos siguen válidos y un cambio de rol
+  aplica al instante. No agregar `rol` al token: obligaría a re-loguear a todos.
+- `POST /api/usuarios` es público y **fuerza `CLIENTE`** en `UsuarioService.crear`: nunca confiar
+  en un rol que venga del cliente.
+- `PUT /api/usuarios/{id}/rol` (`UsuarioRolRequest`) es el único camino para cambiar roles y
+  exige `ADMIN`. Quitar el rol al último `ADMIN` → `409`.
+- Matriz en `SecurityConfig`; permisos a nivel de fila (reserva ajena) en `ReservaService`.
+  Un `403` pasa por `AccessDeniedHandler` (envelope JSON), no por el handler por defecto.
+- Los tests de la matriz están en `config/SeguridadPorRolTests` (login real contra el seed).
+
+### Trampa: agregar una columna `NOT NULL` a una tabla con filas
+
+`@Enumerated(STRING)` + `nullable = false` deja `''` en las filas existentes y MySQL rechaza el
+`ALTER TABLE`. Por eso `Usuario.rol` usa
+`@Column(columnDefinition = "varchar(20) not null default 'CLIENTE'")`: Hibernate agrega la
+columna con default y las filas viejas quedan como `CLIENTE`. Si alguna vez hay que migrar una
+base existente a mano: `UPDATE usuario SET rol = 'ADMIN' WHERE correo = 'admin@email.com';`.
+
 ## Reglas de negocio
 
 - Solapamiento de reservas → `409 Conflict` (`ReservaRepository.existeSolapamiento`).
@@ -65,6 +88,8 @@ Para auditar el bytecode: `javap -c -p -cp target/classes com.proyectosw.sreserv
 ## Contratos que el frontend NO puede cambiar
 
 - `POST /api/usuarios` y `PUT /api/usuarios/{id}` devuelven `409` si el correo ya existe.
+- `POST /api/usuarios` crea siempre un `CLIENTE`; el rol solo cambia por
+  `PUT /api/usuarios/{id}/rol` y solo un `ADMIN` puede hacerlo.
 - `DELETE /api/usuarios/{id}` y `DELETE /api/canchas/{id}` devuelven `409` si el registro tiene
   reservas o pagos asociados (`existsByUsuario_Id` / `existsByCancha_Id`).
 - `PUT /api/reservas/{id}` **ignora el `usuarioId`**: el cliente de una reserva existente no se
