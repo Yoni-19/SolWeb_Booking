@@ -37,6 +37,17 @@
           }
         }
       }
+    },
+    {
+      // El backend se arranca SIEMPRE con Maven: el botón Run/Debug de Java
+      // compila a medias en target/classes y lo deja inconsistente.
+      "label": "backend: run",
+      "type": "shell",
+      "command": ".\\mvnw.cmd spring-boot:run",
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "problemMatcher": []
     }
   ]
 }
