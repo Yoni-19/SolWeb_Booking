@@ -67,6 +67,24 @@ public class UsuarioService {
     }
 
     @Transactional
+    public Usuario cambiarRol(Integer id, Rol rol) {
+        Usuario usuario = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No existe el usuario con id " + id));
+
+        // Sin esta guarda, el ultimo ADMIN puede degradarse y nadie queda habilitado
+        // para volver a asignar roles: el sistema quedaria trabado hasta tocar la base.
+        if (Rol.ADMIN.equals(usuario.getRol()) && !Rol.ADMIN.equals(rol)
+                && repository.countByRol(Rol.ADMIN) == 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede quitar el rol del último administrador");
+        }
+
+        usuario.setRol(rol);
+        return repository.save(usuario);
+    }
+
+    @Transactional
     public void eliminar(Integer id) {
         if (!repository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,

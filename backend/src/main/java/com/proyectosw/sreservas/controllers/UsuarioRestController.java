@@ -16,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.proyectosw.sreservas.dto.UsuarioRequest;
 import com.proyectosw.sreservas.dto.UsuarioResponse;
+import com.proyectosw.sreservas.dto.UsuarioRolRequest;
 import com.proyectosw.sreservas.dto.UsuarioUpdateRequest;
 import com.proyectosw.sreservas.service.UsuarioService;
 
@@ -54,6 +55,12 @@ public class UsuarioRestController {
     public ResponseEntity<UsuarioResponse> actualizar(@PathVariable Integer id,
                                                       @Valid @RequestBody UsuarioUpdateRequest request) {
         return ResponseEntity.ok(UsuarioResponse.toResponse(service.actualizar(id, request.toEntity())));
+    }
+
+    @PutMapping("/{id}/rol")
+    public ResponseEntity<UsuarioResponse> cambiarRol(@PathVariable Integer id,
+                                                      @Valid @RequestBody UsuarioRolRequest request) {
+        return ResponseEntity.ok(UsuarioResponse.toResponse(service.cambiarRol(id, request.rol())));
     }
 
     @DeleteMapping("/{id}")
