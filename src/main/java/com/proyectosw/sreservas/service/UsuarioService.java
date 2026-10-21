@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.proyectosw.sreservas.model.Usuario;
+import com.proyectosw.sreservas.repository.ReservaRepository;
 import com.proyectosw.sreservas.repository.UsuarioRepository;
 
 import jakarta.transaction.Transactional;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor 
 public class UsuarioService {
     private final UsuarioRepository repository;
+    private final ReservaRepository reservaRepository;
     private final PasswordEncoder passwordEncoder;
 
     public List<Usuario> listarTodos() {
@@ -33,6 +35,9 @@ public class UsuarioService {
         if (usuario.getClave() == null || usuario.getClave().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La clave es obligatoria");
         }
+        if (repository.findByCorreo(usuario.getCorreo()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo ya está registrado");
+        }
         usuario.setClave(passwordEncoder.encode(usuario.getClave()));
         return repository.save(usuario);
     }
@@ -42,6 +47,11 @@ public class UsuarioService {
         Usuario existente = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No existe el usuario con id " + id));
+
+        Optional<Usuario> conMismoCorreo = repository.findByCorreo(datos.getCorreo());
+        if (conMismoCorreo.isPresent() && !conMismoCorreo.get().getId().equals(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo ya está registrado");
+        }
 
         existente.setNombres(datos.getNombres());
         existente.setApellidos(datos.getApellidos());
@@ -57,6 +67,10 @@ public class UsuarioService {
         if (!repository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "No existe el usuario con id " + id);
+        }
+        if (reservaRepository.existsByUsuario_Id(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede eliminar el usuario porque tiene reservas asociadas");
         }
         repository.deleteById(id);
     }

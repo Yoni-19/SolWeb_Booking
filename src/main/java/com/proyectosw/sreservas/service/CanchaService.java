@@ -9,6 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.proyectosw.sreservas.model.Cancha;
 import com.proyectosw.sreservas.repository.CanchaRepository;
+import com.proyectosw.sreservas.repository.ReservaRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor 
 public class CanchaService {
     private final CanchaRepository repository;
+    private final ReservaRepository reservaRepository;
 
     public List<Cancha> listarTodos(){
         return repository.findAll();
@@ -55,6 +57,10 @@ public class CanchaService {
         if (!repository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "No existe la cancha con id " + id);
+        }
+        if (reservaRepository.existsByCancha_Id(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede eliminar la cancha porque tiene reservas asociadas");
         }
         repository.deleteById(id); 
     }

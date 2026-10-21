@@ -30,4 +30,10 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer>{
                                @Param("estados") Collection<EstadoReserva> estados,
                                @Param("inicio") LocalDateTime inicio,
                                @Param("fin") LocalDateTime fin);
+
+    /** True if the user has any reservation; blocks the deletion of the user. */
+    boolean existsByUsuario_Id(Integer usuarioId);
+
+    /** True if the court has any reservation; blocks the deletion of the court. */
+    boolean existsByCancha_Id(Integer canchaId);
 }
