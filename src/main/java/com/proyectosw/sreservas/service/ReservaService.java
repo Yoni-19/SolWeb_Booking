@@ -126,9 +126,10 @@ public class ReservaService {
 
     private void recalcularMonto(Reserva reserva) {
         BigDecimal precioHora = reserva.getCancha().getPrecioPorHora();
-        long horas = Duration.between(
+        long minutos = Duration.between(
                 reserva.getFechaHoraInicio(),
-                reserva.getFechaHoraFin()).toHours();
+                reserva.getFechaHoraFin()).toMinutes();
+        long horas = (minutos + 59) / 60;
         reserva.setMontoTotal(precioHora.multiply(BigDecimal.valueOf(horas)));
     }
 }
