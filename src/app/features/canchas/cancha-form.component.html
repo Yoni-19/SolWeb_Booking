@@ -1,0 +1,52 @@
+<section class="page">
+  <app-page-header [title]="isEdit() ? 'Editar cancha' : 'Nueva cancha'" subtitle="Datos del espacio deportivo">
+    <mat-chip-set>
+      <mat-chip>Datos simulados</mat-chip>
+    </mat-chip-set>
+  </app-page-header>
+
+  <mat-card class="form-card">
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="submit()" class="form-grid">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nombre</mat-label>
+          <input matInput formControlName="nombre" placeholder="Cancha de Fútbol 2" />
+          @if (form.controls.nombre.hasError('required')) {
+            <mat-error>El nombre es obligatorio</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Deporte</mat-label>
+          <mat-select formControlName="deporte">
+            @for (deporte of deportes; track deporte) {
+              <mat-option [value]="deporte">{{ deporte }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Precio por hora</mat-label>
+          <input matInput type="number" formControlName="precioPorHora" min="0" />
+          @if (form.controls.precioPorHora.hasError('required')) {
+            <mat-error>El precio es obligatorio</mat-error>
+          } @else if (form.controls.precioPorHora.hasError('min')) {
+            <mat-error>No puede ser negativo</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="full-width">
+          <mat-slide-toggle formControlName="activa">Cancha activa</mat-slide-toggle>
+        </div>
+
+        <div class="form-actions">
+          <a mat-button routerLink="/canchas">Cancelar</a>
+          <button mat-flat-button color="primary" type="submit">
+            <mat-icon>save</mat-icon>
+            <span>{{ isEdit() ? 'Guardar cambios' : 'Registrar cancha' }}</span>
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</section>
