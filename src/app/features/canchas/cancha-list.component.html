@@ -1,13 +1,21 @@
 <section class="page">
   <app-page-header title="Canchas" subtitle="Espacios deportivos del complejo">
     <mat-chip-set>
-      <mat-chip>Datos simulados</mat-chip>
+      <mat-chip>Datos reales</mat-chip>
     </mat-chip-set>
     <a mat-flat-button color="primary" routerLink="/canchas/nueva">
       <mat-icon>add</mat-icon>
       <span>Nueva cancha</span>
     </a>
   </app-page-header>
+
+  @if (loading()) {
+    <div class="cancha-estado-carga">
+      <mat-spinner diameter="32" strokeWidth="3" />
+    </div>
+  } @else if (canchas().length === 0) {
+    <p class="cancha-vacio">No hay canchas registradas.</p>
+  }
 
   <div class="cancha-grid">
     @for (cancha of canchas(); track cancha.id) {
