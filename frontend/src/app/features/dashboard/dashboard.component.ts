@@ -25,19 +25,40 @@ export class DashboardComponent {
 
   readonly reservasPendientes = signal(0);
   readonly reservasConfirmadas = signal(0);
+  readonly totalReservas = signal(0);
   readonly canchasActivas = signal(0);
   readonly totalClientes = signal(0);
 
+  /** First name for the greeting, falling back to the e-mail. */
+  readonly nombre = signal('');
+
   constructor() {
+    // El saludo y los accesos dependen del rol, y el rol llega de /api/auth/me.
+    this.auth.asegurarSesion().subscribe({
+      next: (sesion) => {
+        this.nombre.set(sesion.nombres?.split(' ')[0] ?? sesion.correo);
+        this.cargar();
+      },
+      error: () => this.cargar(),
+    });
+  }
+
+  private cargar(): void {
+    // El backend ya filtra: un CLIENTE recibe solo sus propias reservas.
     this.reservasService.list().subscribe((reservas) => {
+      this.totalReservas.set(reservas.length);
       this.reservasPendientes.set(reservas.filter((r) => r.estadoReserva === 'PENDIENTE').length);
       this.reservasConfirmadas.set(reservas.filter((r) => r.estadoReserva === 'CONFIRMADA').length);
     });
-    this.canchasService.list().subscribe((canchas) => {
-      this.canchasActivas.set(canchas.filter((c) => c.activa).length);
-    });
-    this.clientesService.list().subscribe((clientes) => {
-      this.totalClientes.set(clientes.length);
-    });
+
+    // Global counters only make sense (and are only allowed) for staff.
+    if (!this.auth.esCliente()) {
+      this.canchasService.list().subscribe((canchas) => {
+        this.canchasActivas.set(canchas.filter((c) => c.activa).length);
+      });
+      this.clientesService.list().subscribe((clientes) => {
+        this.totalClientes.set(clientes.length);
+      });
+    }
   }
 }

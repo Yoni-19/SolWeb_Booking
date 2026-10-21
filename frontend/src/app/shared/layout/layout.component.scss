@@ -30,6 +30,15 @@
   margin-right: 8px;
 }
 
+.toolbar-rol {
+  margin-right: 12px;
+  --mat-chip-label-text-size: 0.75rem;
+
+  @media (max-width: 600px) {
+    display: none;
+  }
+}
+
 .layout-content {
   padding: 0;
 }

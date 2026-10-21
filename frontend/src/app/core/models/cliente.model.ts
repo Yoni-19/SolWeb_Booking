@@ -14,6 +14,13 @@ export interface Cliente {
 /** Role of a user; mirrors the backend enum `Rol`. */
 export type Rol = 'ADMIN' | 'RECEPCIONISTA' | 'CLIENTE';
 
+/** Human-readable role names used in chips and menus. */
+export const ROL_LABEL: Record<Rol, string> = {
+  ADMIN: 'Administrador',
+  RECEPCIONISTA: 'Recepcionista',
+  CLIENTE: 'Cliente',
+};
+
 /** GET /api/auth/me: what the UI needs to know about the current session. */
 export interface UsuarioSesion {
   id: number;

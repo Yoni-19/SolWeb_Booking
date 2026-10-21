@@ -19,11 +19,12 @@ export interface Reserva {
 /**
  * Payload for POST/PUT /api/reservas (backend ReservaRequest DTO).
  * `estadoReserva` and `montoTotal` are absent on purpose: the backend
- * computes the state and the amount by hour started.
+ * computes the state and the amount by hour started. `usuarioId` is optional:
+ * a CLIENTE books for itself and the backend overwrites it.
  */
 export interface ReservaAlta {
   fechaHoraInicio: string;
   fechaHoraFin: string;
   canchaId: number;
-  usuarioId: number;
+  usuarioId?: number;
 }

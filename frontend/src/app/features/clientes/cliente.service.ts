@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { API_BASE } from '../../core/api.constants';
-import { Cliente, ClienteAlta, ClienteEdicion } from '../../core/models/cliente.model';
+import { Cliente, ClienteAlta, ClienteEdicion, Rol } from '../../core/models/cliente.model';
 
 /**
  * Real HTTP service — talks to the Spring Boot backend.
@@ -41,5 +41,10 @@ export class ClienteService {
 
   remove(id: number): Observable<void> {
     return this.http.delete<void>(`${this.url}/${id}`);
+  }
+
+  /** PUT /api/usuarios/{id}/rol — only an ADMIN may change roles. */
+  cambiarRol(id: number, rol: Rol): Observable<Cliente> {
+    return this.http.put<Cliente>(`${this.url}/${id}/rol`, { rol });
   }
 }

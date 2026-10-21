@@ -1,5 +1,5 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,6 +9,7 @@ import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { apiErrorMessage } from '../../core/http/api-error';
 import { Reserva } from '../../core/models/reserva.model';
+import { AuthService } from '../../core/services/auth.service';
 import { PageHeader } from '../../shared/ui/page-header.component';
 import { ReservaService } from './reserva.service';
 
@@ -22,10 +23,17 @@ import { ReservaService } from './reserva.service';
 export class ReservaListComponent {
   private readonly service = inject(ReservaService);
   private readonly snackBar = inject(MatSnackBar);
+  readonly auth = inject(AuthService);
 
   readonly reservas = signal<Reserva[]>([]);
   readonly loading = signal(true);
-  readonly displayedColumns = ['id', 'cancha', 'cliente', 'inicio', 'estado', 'monto', 'acciones'];
+  /** Un CLIENTE solo puede crear reservas: el backend le bloquea editar y eliminar. */
+  readonly puedeGestionar = computed(() => !this.auth.esCliente());
+  readonly displayedColumns = computed(() =>
+    this.puedeGestionar()
+      ? ['id', 'cancha', 'cliente', 'inicio', 'estado', 'monto', 'acciones']
+      : ['id', 'cancha', 'inicio', 'estado', 'monto'],
+  );
 
   constructor() {
     this.service.list().subscribe({

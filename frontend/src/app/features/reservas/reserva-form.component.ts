@@ -14,6 +14,7 @@ import { apiErrorMessage } from '../../core/http/api-error';
 import { Cancha } from '../../core/models/cancha.model';
 import { Cliente } from '../../core/models/cliente.model';
 import { EstadoReserva, ReservaAlta } from '../../core/models/reserva.model';
+import { AuthService } from '../../core/services/auth.service';
 import { PageHeader } from '../../shared/ui/page-header.component';
 import { CanchaService } from '../canchas/cancha.service';
 import { ClienteService } from '../clientes/cliente.service';
@@ -42,6 +43,7 @@ export class ReservaFormComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
+  readonly auth = inject(AuthService);
 
   readonly canchas = signal<Cancha[]>([]);
   readonly clientes = signal<Cliente[]>([]);
@@ -53,7 +55,8 @@ export class ReservaFormComponent {
   private editingId: number | null = null;
 
   readonly form = this.fb.nonNullable.group({
-    usuarioId: [null as number | null, Validators.required],
+    // El cliente no elige usuario: el backend lo fuerza al usuario autenticado.
+    usuarioId: [null as number | null],
     canchaId: [null as number | null, Validators.required],
     fecha: [null as Date | null, Validators.required],
     horaInicio: ['10:00', Validators.required],
@@ -65,9 +68,11 @@ export class ReservaFormComponent {
       next: (canchas) => this.canchas.set(canchas.filter((c) => c.activa)),
       error: (err) => this.errorMessage.set(apiErrorMessage(err, 'No se pudieron cargar las canchas')),
     });
-    this.clienteService.list().subscribe({
-      next: (clientes) => this.clientes.set(clientes),
-      error: (err) => this.errorMessage.set(apiErrorMessage(err, 'No se pudieron cargar los clientes')),
+
+    // El rol define si hace falta elegir el cliente; el rol llega de /api/auth/me.
+    this.auth.asegurarSesion().subscribe({
+      next: () => this.configurarPorRol(),
+      error: () => this.configurarPorRol(),
     });
 
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -98,6 +103,22 @@ export class ReservaFormComponent {
     }
   }
 
+  /** Staff picks the client; a CLIENTE books for itself (no client list to load). */
+  private configurarPorRol(): void {
+    const usuarioId = this.form.controls.usuarioId;
+
+    if (this.auth.esCliente()) {
+      usuarioId.clearValidators();
+    } else {
+      usuarioId.setValidators(Validators.required);
+      this.clienteService.list().subscribe({
+        next: (clientes) => this.clientes.set(clientes),
+        error: (err) => this.errorMessage.set(apiErrorMessage(err, 'No se pudieron cargar los clientes')),
+      });
+    }
+    usuarioId.updateValueAndValidity({ emitEvent: false });
+  }
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -105,7 +126,7 @@ export class ReservaFormComponent {
     }
 
     const { usuarioId, canchaId, fecha, horaInicio, horaFin } = this.form.getRawValue();
-    if (usuarioId == null || canchaId == null || fecha == null) {
+    if (canchaId == null || fecha == null || (!this.auth.esCliente() && usuarioId == null)) {
       this.form.markAllAsTouched();
       return;
     }
@@ -123,8 +144,10 @@ export class ReservaFormComponent {
       fechaHoraInicio: toLocalDateTime(fecha, horaInicio),
       fechaHoraFin: toLocalDateTime(fecha, horaFin),
       canchaId,
-      usuarioId,
     };
+    if (usuarioId != null) {
+      payload.usuarioId = usuarioId;
+    }
 
     const request$ = this.isEdit()
       ? this.service.update(this.editingId as number, payload)
