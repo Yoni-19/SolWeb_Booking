@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 import { CanchaFormComponent } from './features/canchas/cancha-form.component';
 import { CanchaListComponent } from './features/canchas/cancha-list.component';
 import { ClienteFormComponent } from './features/clientes/cliente-form.component';
@@ -20,13 +21,21 @@ export const routes: Routes = [
       { path: 'dashboard', component: DashboardComponent },
       { path: 'reservas', component: ReservaListComponent },
       { path: 'reservas/nueva', component: ReservaFormComponent },
-      { path: 'reservas/:id/editar', component: ReservaFormComponent },
-      { path: 'canchas', component: CanchaListComponent },
-      { path: 'canchas/nueva', component: CanchaFormComponent },
-      { path: 'canchas/:id/editar', component: CanchaFormComponent },
-      { path: 'clientes', component: ClienteListComponent },
-      { path: 'clientes/nueva', component: ClienteFormComponent },
-      { path: 'clientes/:id/editar', component: ClienteFormComponent },
+      {
+        path: 'reservas/:id/editar',
+        component: ReservaFormComponent,
+        canActivate: [roleGuard('ADMIN', 'RECEPCIONISTA')],
+      },
+      { path: 'canchas', component: CanchaListComponent, canActivate: [roleGuard('ADMIN')] },
+      { path: 'canchas/nueva', component: CanchaFormComponent, canActivate: [roleGuard('ADMIN')] },
+      { path: 'canchas/:id/editar', component: CanchaFormComponent, canActivate: [roleGuard('ADMIN')] },
+      {
+        path: 'clientes',
+        component: ClienteListComponent,
+        canActivate: [roleGuard('ADMIN', 'RECEPCIONISTA')],
+      },
+      { path: 'clientes/nueva', component: ClienteFormComponent, canActivate: [roleGuard('ADMIN')] },
+      { path: 'clientes/:id/editar', component: ClienteFormComponent, canActivate: [roleGuard('ADMIN')] },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],
   },

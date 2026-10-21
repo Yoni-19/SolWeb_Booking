@@ -7,6 +7,20 @@ export interface Cliente {
   nombres: string;
   apellidos: string;
   correo: string;
+  /** Always present in API responses; optional for locally built objects. */
+  rol?: Rol;
+}
+
+/** Role of a user; mirrors the backend enum `Rol`. */
+export type Rol = 'ADMIN' | 'RECEPCIONISTA' | 'CLIENTE';
+
+/** GET /api/auth/me: what the UI needs to know about the current session. */
+export interface UsuarioSesion {
+  id: number;
+  nombres: string;
+  apellidos: string;
+  correo: string;
+  rol: Rol;
 }
 
 /** POST /api/usuarios: the backend requires a password on creation. */
