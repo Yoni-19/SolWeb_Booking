@@ -1,5 +1,10 @@
 # AGENTS.md — sreservas (backend)
 
+> Este backend vive en `backend/` dentro del monorepo `SistemaComplejoDeportivo`.
+> **Todos los comandos de esta página se ejecutan desde `backend/`.** El repo git está un nivel
+> arriba: `git status` desde acá muestra el monorepo entero. Convenciones generales del
+> monorepo en `../AGENTS.md`.
+
 ## Build y run
 
 - **El build oficial es Maven.** `mvn` NO está en el PATH de esta máquina: usá el wrapper.

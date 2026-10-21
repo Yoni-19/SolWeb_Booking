@@ -1,59 +1,51 @@
-# Frontend
+# Frontend — Sistema Complejo Deportivo
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.3.
+SPA del sistema de reservas. Angular standalone con signals y Angular Material.
+Consume la API real del backend (`http://localhost:8080`): no hay datos en memoria.
 
-## Development server
+## Requisitos
 
-To start a local development server, run:
+- Node.js 20+ con npm
+- La API corriendo (`cd ../backend` → `.\mvnw.cmd spring-boot:run`)
 
-```bash
-ng serve
+## Cómo correr
+
+```powershell
+cd frontend
+npm install
+npm start        # dev server en http://localhost:4200
+npm run build    # build de producción -> dist/
+npm test         # tests (Vitest)
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Estructura
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+```
+src/app/
+├── core/          servicios, modelos, interceptores y guards compartidos
+│   ├── api.constants.ts     API_BASE (apunta a http://localhost:8080)
+│   ├── guards/              auth.guard (exige JWT en localStorage)
+│   ├── http/api-error.ts    traduce el envelope de error del backend a un mensaje
+│   ├── interceptors/        agrega Authorization: Bearer a cada request
+│   ├── models/              tipos de dominio (Cancha, Cliente, Reserva)
+│   └── services/auth.service.ts
+├── features/      un módulo por dominio: canchas/, clientes/, reservas/, dashboard/, login/
+├── shared/        layout (menú lateral) y componentes de UI
+└── app.routes.ts  rutas + guard de autenticación
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Convenciones
 
-```bash
-ng generate --help
-```
+- Cada módulo tiene su `*.service.ts` (solo HTTP contra la API), sus componentes y sus modelos.
+- Los formularios son reactivos con `FormBuilder`; cada uno maneja `loading` y `errorMessage`
+  como signals y muestra el error del backend con `apiErrorMessage()`.
+- La sesión vive en `localStorage`: `auth_token` (JWT) y `auth_correo`.
 
-## Building
+## Contratos que el frontend no puede cambiar
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- `POST /api/usuarios` exige clave; `PUT /api/usuarios/{id}` la acepta opcional
+  (vacía = no cambiar la actual).
+- `PUT /api/reservas/{id}` ignora el `usuarioId` y nunca acepta `estadoReserva` ni
+  `montoTotal`: los calcula el backend.
+- `POST /api/pagos` no acepta `monto`: el servicio lo fuerza al total de la reserva.
+- La solapamiento de horarios devuelve `409`.
