@@ -15,6 +15,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -27,9 +28,11 @@ public class Reserva {
     @Id @GeneratedValue (strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @NotNull (message = "La fecha y hora de inicio es obligatoria")
     @Column (nullable = false)
     private LocalDateTime fechaHoraInicio;
 
+    @NotNull (message = "La fecha y hora de fin es obligatoria")
     @Column (nullable = false)
     private LocalDateTime fechaHoraFin;
 
@@ -40,10 +43,12 @@ public class Reserva {
     @Column (nullable = false)
     private BigDecimal montoTotal;
 
+    @NotNull (message = "La reserva debe indicar un usuario")
     @ManyToOne (fetch = FetchType.LAZY)
     @JoinColumn (name = "usuario_id", nullable = false)
     private Usuario usuario;
     
+    @NotNull (message = "La reserva debe indicar una cancha")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cancha_id", nullable = false)
     private Cancha cancha;

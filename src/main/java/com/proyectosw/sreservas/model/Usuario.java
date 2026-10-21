@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -30,11 +31,11 @@ public class Usuario {
     private String apellidos;
 
     @NotBlank 
-    @Size (min = 2, max = 100)
+    @Email (message = "El correo debe tener un formato válido")
+    @Size (max = 100)
     @Column (nullable = false, length = 100, unique = true)
     private String correo;
     
-    @NotBlank 
     @Size (min = 2, max = 100)
     @Column (nullable = false, length = 100)
     private String clave;

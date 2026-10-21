@@ -16,6 +16,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -31,6 +32,7 @@ public class Pago {
     @Column (nullable = false)
     private BigDecimal monto;
     
+    @NotNull (message = "El método de pago es obligatorio")
     @Column (nullable = false)
     @Enumerated(EnumType.STRING)
     private MetodoPago metodoPago;
@@ -42,6 +44,7 @@ public class Pago {
     @Column (nullable = false)
     private LocalDateTime fechaPago;
     
+    @NotNull (message = "El pago debe referenciar una reserva")
     @OneToOne (fetch = FetchType.LAZY)
     @JoinColumn (name = "reserva_id", unique = true, nullable = false)
     private Reserva reserva;
