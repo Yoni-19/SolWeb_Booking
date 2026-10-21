@@ -9,6 +9,15 @@
 - MySQL: `localhost:3306`, user `root`, pass `mysql`, base `db_complejoDeportivo`.
   El esquema y el seed (`src/main/resources/data.sql`) se crean solos.
 
+### Trampa activa en Windows: `clean` con la app corriendo
+
+Con el backend levantado, `.\mvnw.cmd clean` falla con
+`Failed to delete target/generated-test-sources/test-annotations`: el JVM bloquea los archivos
+de `target/`. Mientras la app esté en ejecución usá **solo** `.\mvnw.cmd compile`.
+
+`spring-boot-devtools` está en el `pom.xml`: al recompilar, la app **se reinicia sola** con las
+clases nuevas. No hace falta bajar y volver a levantar para probar un cambio de código.
+
 ## Trampa activa: Lombok + JDK 25
 
 El LS de VS Code (`redhat.java`) compila con ECJ usando su Lombok embebido **1.18.39**, que
@@ -46,3 +55,14 @@ Para auditar el bytecode: `javap -c -p -cp target/classes com.proyectosw.sreserv
 - Monto por **hora iniciada**: `horas = (minutos + 59) / 60`. No usar `Duration.toHours()`.
 - `PUT /api/usuarios/{id}` acepta clave opcional (`UsuarioUpdateRequest`): si viene `null`,
   la clave no cambia.
+- `POST /api/usuarios` exige clave (`UsuarioRequest`); `PUT` también la acepta y la re-codifica.
+
+## Contratos que el frontend NO puede cambiar
+
+- `POST /api/usuarios` y `PUT /api/usuarios/{id}` devuelven `409` si el correo ya existe.
+- `DELETE /api/usuarios/{id}` y `DELETE /api/canchas/{id}` devuelven `409` si el registro tiene
+  reservas o pagos asociados (`existsByUsuario_Id` / `existsByCancha_Id`).
+- `PUT /api/reservas/{id}` **ignora el `usuarioId`**: el cliente de una reserva existente no se
+  puede cambiar. `estadoReserva` tampoco se puede enviar: el backend lo calcula.
+- Cualquier violación de FK que se escape a la base devuelve `409` (handler de
+  `DataIntegrityViolationException`), nunca `500`.
