@@ -1,33 +1,36 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DateAdapter } from '@angular/material/core';
 import { MatButton } from '@angular/material/button';
 import { MatCard, MatCardContent } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { apiErrorMessage } from '../../core/http/api-error';
 import { Cancha } from '../../core/models/cancha.model';
 import { Cliente } from '../../core/models/cliente.model';
-import { ESTADOS_RESERVA, Reserva } from '../../core/models/reserva.model';
+import { EstadoReserva, ReservaAlta } from '../../core/models/reserva.model';
 import { PageHeader } from '../../shared/ui/page-header.component';
 import { CanchaService } from '../canchas/cancha.service';
 import { ClienteService } from '../clientes/cliente.service';
 import { ReservaService } from './reserva.service';
 
-/** Combines a Date (datepicker) and a "HH:mm" string into "yyyy-MM-ddTHH:mm". */
+/** Builds "yyyy-MM-ddTHH:mm" from the LOCAL date, so no timezone shift is applied. */
 function toLocalDateTime(date: Date, time: string): string {
-  const iso = new Date(date).toISOString();
-  return `${iso.slice(0, 10)}T${time}`;
+  const anio = date.getFullYear();
+  const mes = String(date.getMonth() + 1).padStart(2, '0');
+  const dia = String(date.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}T${time}`;
 }
 
 @Component({
   selector: 'app-reserva-form',
   standalone: true,
-  imports: [ReactiveFormsModule, MatCard, MatCardContent, MatInputModule, MatSelectModule, MatDatepickerModule, MatButton, MatIconModule, MatChipsModule, RouterLink, PageHeader],
+  imports: [ReactiveFormsModule, MatCard, MatCardContent, MatInputModule, MatSelectModule, MatDatepickerModule, MatButton, MatIconModule, MatChipsModule, MatProgressSpinnerModule, RouterLink, PageHeader],
   templateUrl: './reserva-form.component.html',
   styleUrl: './reserva-form.component.scss',
 })
@@ -42,8 +45,11 @@ export class ReservaFormComponent {
 
   readonly canchas = signal<Cancha[]>([]);
   readonly clientes = signal<Cliente[]>([]);
-  readonly estados = ESTADOS_RESERVA;
   readonly isEdit = signal(false);
+  readonly loading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+  /** Estado actual de la reserva; el backend lo calcula y no se puede enviar. */
+  readonly estadoActual = signal<EstadoReserva | null>(null);
   private editingId: number | null = null;
 
   readonly form = this.fb.nonNullable.group({
@@ -51,28 +57,43 @@ export class ReservaFormComponent {
     canchaId: [null as number | null, Validators.required],
     fecha: [null as Date | null, Validators.required],
     horaInicio: ['10:00', Validators.required],
-    horaFin: ['12:00', [Validators.required]],
-    estadoReserva: ['PENDIENTE' as Reserva['estadoReserva'], Validators.required],
+    horaFin: ['12:00', Validators.required],
   });
 
   constructor() {
-    this.canchaService.list().subscribe((canchas) => this.canchas.set(canchas.filter((c) => c.activa)));
-    this.clienteService.list().subscribe((clientes) => this.clientes.set(clientes));
+    this.canchaService.list().subscribe({
+      next: (canchas) => this.canchas.set(canchas.filter((c) => c.activa)),
+      error: (err) => this.errorMessage.set(apiErrorMessage(err, 'No se pudieron cargar las canchas')),
+    });
+    this.clienteService.list().subscribe({
+      next: (clientes) => this.clientes.set(clientes),
+      error: (err) => this.errorMessage.set(apiErrorMessage(err, 'No se pudieron cargar los clientes')),
+    });
 
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.isEdit.set(true);
       this.editingId = Number(idParam);
-      this.service.get(this.editingId).subscribe((reserva) => {
-        if (!reserva) return;
-        this.form.patchValue({
-          usuarioId: reserva.usuarioId,
-          canchaId: reserva.canchaId,
-          fecha: new Date(reserva.fechaHoraInicio),
-          horaInicio: reserva.fechaHoraInicio.slice(11, 16),
-          horaFin: reserva.fechaHoraFin.slice(11, 16),
-          estadoReserva: reserva.estadoReserva,
-        });
+      this.service.get(this.editingId).subscribe({
+        next: (reserva) => {
+          if (!reserva) {
+            this.errorMessage.set('No existe la reserva solicitada.');
+            return;
+          }
+          this.estadoActual.set(reserva.estadoReserva);
+          this.form.patchValue({
+            usuarioId: reserva.usuarioId,
+            canchaId: reserva.canchaId,
+            fecha: new Date(reserva.fechaHoraInicio),
+            horaInicio: reserva.fechaHoraInicio.slice(11, 16),
+            horaFin: reserva.fechaHoraFin.slice(11, 16),
+          });
+          // El backend ignora el usuario al actualizar: se muestra bloqueado.
+          this.form.controls.usuarioId.disable();
+        },
+        error: (err) => {
+          this.errorMessage.set(apiErrorMessage(err, 'No se pudo cargar la reserva'));
+        },
       });
     }
   }
@@ -83,30 +104,42 @@ export class ReservaFormComponent {
       return;
     }
 
-    const value = this.form.getRawValue();
-    const cancha = this.canchas().find((c) => c.id === value.canchaId);
-    const cliente = this.clientes().find((c) => c.id === value.usuarioId);
-    const inicio = toLocalDateTime(value.fecha!, value.horaInicio);
-    const fin = toLocalDateTime(value.fecha!, value.horaFin);
+    const { usuarioId, canchaId, fecha, horaInicio, horaFin } = this.form.getRawValue();
+    if (usuarioId == null || canchaId == null || fecha == null) {
+      this.form.markAllAsTouched();
+      return;
+    }
 
-    const payload: Omit<Reserva, 'id'> = {
-      fechaHoraInicio: inicio,
-      fechaHoraFin: fin,
-      estadoReserva: value.estadoReserva,
-      montoTotal: 0,
-      canchaId: value.canchaId,
-      canchaNombre: cancha?.nombre,
-      usuarioId: value.usuarioId,
-      usuarioNombre: cliente ? `${cliente.nombres} ${cliente.apellidos}` : undefined,
+    this.errorMessage.set(null);
+
+    if (horaFin <= horaInicio) {
+      this.errorMessage.set('La hora de fin debe ser posterior a la de inicio');
+      return;
+    }
+
+    this.loading.set(true);
+
+    const payload: ReservaAlta = {
+      fechaHoraInicio: toLocalDateTime(fecha, horaInicio),
+      fechaHoraFin: toLocalDateTime(fecha, horaFin),
+      canchaId,
+      usuarioId,
     };
 
     const request$ = this.isEdit()
-      ? this.service.update({ ...payload, id: this.editingId })
+      ? this.service.update(this.editingId as number, payload)
       : this.service.create(payload);
 
-    request$.subscribe(() => {
-      this.snackBar.open('Reserva guardada (datos simulados).', 'Cerrar', { duration: 3000 });
-      this.router.navigate(['/reservas']);
+    request$.subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.snackBar.open('Reserva guardada.', 'Cerrar', { duration: 3000 });
+        this.router.navigate(['/reservas']);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.errorMessage.set(apiErrorMessage(err, 'No se pudo guardar la reserva'));
+      },
     });
   }
 }

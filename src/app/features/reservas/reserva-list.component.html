@@ -1,13 +1,21 @@
 <section class="page">
   <app-page-header title="Reservas" subtitle="Listado de reservas del complejo">
     <mat-chip-set>
-      <mat-chip>Datos simulados</mat-chip>
+      <mat-chip>Datos reales</mat-chip>
     </mat-chip-set>
     <a mat-flat-button color="primary" routerLink="/reservas/nueva">
       <mat-icon>add</mat-icon>
       <span>Nueva reserva</span>
     </a>
   </app-page-header>
+
+  @if (loading()) {
+    <div class="reserva-estado-carga">
+      <mat-spinner diameter="32" strokeWidth="3" />
+    </div>
+  } @else if (reservas().length === 0) {
+    <p class="reserva-vacio">No hay reservas registradas.</p>
+  }
 
   <div class="table-wrap">
     <table mat-table [dataSource]="reservas()" class="reserva-table">

@@ -15,3 +15,15 @@ export interface Reserva {
   usuarioId: number | null;
   usuarioNombre?: string;
 }
+
+/**
+ * Payload for POST/PUT /api/reservas (backend ReservaRequest DTO).
+ * `estadoReserva` and `montoTotal` are absent on purpose: the backend
+ * computes the state and the amount by hour started.
+ */
+export interface ReservaAlta {
+  fechaHoraInicio: string;
+  fechaHoraFin: string;
+  canchaId: number;
+  usuarioId: number;
+}

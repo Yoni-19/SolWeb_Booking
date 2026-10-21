@@ -4,7 +4,7 @@
     subtitle="Completa los datos de la reserva"
   >
     <mat-chip-set>
-      <mat-chip>Datos simulados</mat-chip>
+      <mat-chip>Datos reales</mat-chip>
     </mat-chip-set>
   </app-page-header>
 
@@ -20,6 +20,9 @@
           </mat-select>
           @if (form.controls.usuarioId.hasError('required')) {
             <mat-error>Selecciona un cliente</mat-error>
+          }
+          @if (isEdit()) {
+            <mat-hint>El cliente no se puede cambiar en una reserva existente</mat-hint>
           }
         </mat-form-field>
 
@@ -62,18 +65,32 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Estado</mat-label>
-          <mat-select formControlName="estadoReserva">
-            @for (estado of estados; track estado) {
-              <mat-option [value]="estado">{{ estado }}</mat-option>
-            }
-          </mat-select>
+          <input matInput [value]="estadoActual() ?? 'PENDIENTE'" readonly />
+          @if (isEdit()) {
+            <mat-hint>El estado lo define el backend y no se puede editar desde aquí</mat-hint>
+          } @else {
+            <mat-hint>Las reservas nuevas se crean en estado PENDIENTE</mat-hint>
+          }
         </mat-form-field>
+
+        @if (errorMessage()) {
+          <div class="full-width form-error" role="alert">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorMessage() }}</span>
+          </div>
+        }
 
         <div class="form-actions">
           <a mat-button routerLink="/reservas">Cancelar</a>
-          <button mat-flat-button color="primary" type="submit">
-            <mat-icon>save</mat-icon>
-            <span>{{ isEdit() ? 'Guardar cambios' : 'Registrar reserva' }}</span>
+          <button mat-flat-button color="primary" type="submit" [disabled]="loading()">
+            @if (loading()) {
+              <mat-spinner diameter="20" strokeWidth="3" />
+            } @else {
+              <ng-container>
+                <mat-icon>save</mat-icon>
+                <span>{{ isEdit() ? 'Guardar cambios' : 'Registrar reserva' }}</span>
+              </ng-container>
+            }
           </button>
         </div>
       </form>
