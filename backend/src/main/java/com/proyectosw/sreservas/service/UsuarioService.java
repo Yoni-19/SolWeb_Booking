@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.proyectosw.sreservas.model.Usuario;
+import com.proyectosw.sreservas.model.enums.Rol;
 import com.proyectosw.sreservas.repository.ReservaRepository;
 import com.proyectosw.sreservas.repository.UsuarioRepository;
 
@@ -38,6 +39,9 @@ public class UsuarioService {
         if (repository.findByCorreo(usuario.getCorreo()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo ya está registrado");
         }
+        // El alta es publica: la cuenta nace siempre como CLIENTE. El rol se cambia despues
+        // con PUT /api/usuarios/{id}/rol, que solo puede usar un ADMIN.
+        usuario.setRol(Rol.CLIENTE);
         usuario.setClave(passwordEncoder.encode(usuario.getClave()));
         return repository.save(usuario);
     }
