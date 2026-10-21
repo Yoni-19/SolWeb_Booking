@@ -13,40 +13,45 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.proyectosw.sreservas.model.Cancha;
+import com.proyectosw.sreservas.dto.CanchaRequest;
+import com.proyectosw.sreservas.dto.CanchaResponse;
 import com.proyectosw.sreservas.service.CanchaService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-@RestController 
-@RequestMapping ("api/canchas")
-@RequiredArgsConstructor 
+@RestController
+@RequestMapping ("/api/canchas")
+@RequiredArgsConstructor
 public class CanchaRestController {
     private final CanchaService service;
 
     @GetMapping
-    public ResponseEntity<List<Cancha>> listarTodos() {
-        return ResponseEntity.ok(service.listarTodos());
+    public ResponseEntity<List<CanchaResponse>> listarTodos() {
+        List<CanchaResponse> canchas = service.listarTodos().stream()
+                .map(CanchaResponse::toResponse)
+                .toList();
+        return ResponseEntity.ok(canchas);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Cancha> buscarPorId(@PathVariable Integer id) {
+    public ResponseEntity<CanchaResponse> buscarPorId(@PathVariable Integer id) {
         return service.buscarPorId(id)
+                .map(CanchaResponse::toResponse)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Cancha> crear(@Valid @RequestBody Cancha cancha) {
-        Cancha nueva = service.crear(cancha);
+    public ResponseEntity<CanchaResponse> crear(@Valid @RequestBody CanchaRequest request) {
+        CanchaResponse nueva = CanchaResponse.toResponse(service.crear(request.toEntity()));
         return ResponseEntity.status(HttpStatus.CREATED).body(nueva);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Cancha> actualizar(@PathVariable Integer id,
-                                              @RequestBody Cancha cancha) {
-        return ResponseEntity.ok(service.actualizar(id, cancha));
+    public ResponseEntity<CanchaResponse> actualizar(@PathVariable Integer id,
+                                                     @Valid @RequestBody CanchaRequest request) {
+        return ResponseEntity.ok(CanchaResponse.toResponse(service.actualizar(id, request.toEntity())));
     }
 
     @DeleteMapping("/{id}")

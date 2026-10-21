@@ -30,6 +30,9 @@ public class UsuarioService {
 
     @Transactional 
     public Usuario crear(Usuario usuario) {
+        if (usuario.getClave() == null || usuario.getClave().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La clave es obligatoria");
+        }
         usuario.setClave(passwordEncoder.encode(usuario.getClave()));
         return repository.save(usuario);
     }

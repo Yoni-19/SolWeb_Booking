@@ -14,46 +14,52 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.proyectosw.sreservas.model.Usuario;
+import com.proyectosw.sreservas.dto.UsuarioRequest;
+import com.proyectosw.sreservas.dto.UsuarioResponse;
+import com.proyectosw.sreservas.dto.UsuarioUpdateRequest;
 import com.proyectosw.sreservas.service.UsuarioService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-@RestController 
-@RequestMapping ("api/usuarios")
-@RequiredArgsConstructor 
+@RestController
+@RequestMapping ("/api/usuarios")
+@RequiredArgsConstructor
 public class UsuarioRestController {
     private final UsuarioService service;
-    
+
     @GetMapping
-    public ResponseEntity<List<Usuario>> listarTodos() {
-        return ResponseEntity.ok(service.listarTodos());              
+    public ResponseEntity<List<UsuarioResponse>> listarTodos() {
+        List<UsuarioResponse> usuarios = service.listarTodos().stream()
+                .map(UsuarioResponse::toResponse)
+                .toList();
+        return ResponseEntity.ok(usuarios);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Usuario> buscarPorId(@PathVariable Integer id) {
+    public ResponseEntity<UsuarioResponse> buscarPorId(@PathVariable Integer id) {
         return service.buscarPorId(id)
-                .map(ResponseEntity::ok)                               
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No existe el usuario con id " + id));            
+                .map(UsuarioResponse::toResponse)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No existe el usuario con id " + id));
     }
 
     @PostMapping
-    public ResponseEntity<Usuario> crear(@Valid @RequestBody Usuario usuario) {
-        Usuario nuevo = service.crear(usuario);
-        return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);  
+    public ResponseEntity<UsuarioResponse> crear(@Valid @RequestBody UsuarioRequest request) {
+        UsuarioResponse nuevo = UsuarioResponse.toResponse(service.crear(request.toEntity()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Usuario> actualizar(@PathVariable Integer id,
-                                               @RequestBody Usuario usuario) {
-        return ResponseEntity.ok(service.actualizar(id, usuario));     
+    public ResponseEntity<UsuarioResponse> actualizar(@PathVariable Integer id,
+                                                      @Valid @RequestBody UsuarioUpdateRequest request) {
+        return ResponseEntity.ok(UsuarioResponse.toResponse(service.actualizar(id, request.toEntity())));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         service.eliminar(id);
-        return ResponseEntity.noContent().build();                     
+        return ResponseEntity.noContent().build();
     }
 
 }

@@ -14,7 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.proyectosw.sreservas.model.Reserva;
+import com.proyectosw.sreservas.dto.ReservaRequest;
+import com.proyectosw.sreservas.dto.ReservaResponse;
 import com.proyectosw.sreservas.service.ReservaService;
 
 import jakarta.validation.Valid;
@@ -22,30 +23,36 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping ("/api/reservas")
-@RequiredArgsConstructor 
+@RequiredArgsConstructor
 public class ReservaRestController {
     private final ReservaService service;
 
-    @GetMapping 
-    public ResponseEntity<List<Reserva>> listarTodos(){
-        return ResponseEntity.ok(service.listarTodos());
+    @GetMapping
+    public ResponseEntity<List<ReservaResponse>> listarTodos(){
+        List<ReservaResponse> reservas = service.listarTodos().stream()
+                .map(ReservaResponse::toResponse)
+                .toList();
+        return ResponseEntity.ok(reservas);
     }
 
     @GetMapping ("/{id}")
-    public ResponseEntity<Reserva> buscarPorId(@PathVariable Integer id){
-        return service.buscarPorId(id).map(ResponseEntity::ok).orElseThrow(
+    public ResponseEntity<ReservaResponse> buscarPorId(@PathVariable Integer id){
+        return service.buscarPorId(id)
+                .map(ReservaResponse::toResponse)
+                .map(ResponseEntity::ok)
+                .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No existe la reserva con id " + id));
     }
 
-    @PostMapping 
-    public ResponseEntity<Reserva> crear(@Valid @RequestBody Reserva reserva){
-        Reserva nuevo = service.crear(reserva);
-        return ResponseEntity.status(HttpStatus.CREATED).body(nuevo); 
+    @PostMapping
+    public ResponseEntity<ReservaResponse> crear(@Valid @RequestBody ReservaRequest request){
+        ReservaResponse nuevo = ReservaResponse.toResponse(service.crear(request.toEntity()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);
     }
 
     @PutMapping ("/{id}")
-    public ResponseEntity<Reserva> actualizar(@PathVariable Integer id, @RequestBody Reserva reserva){
-        return ResponseEntity.ok(service.actualizar(id, reserva));
+    public ResponseEntity<ReservaResponse> actualizar(@PathVariable Integer id, @Valid @RequestBody ReservaRequest request){
+        return ResponseEntity.ok(ReservaResponse.toResponse(service.actualizar(id, request.toEntity())));
     }
 
     @DeleteMapping ("/{id}")

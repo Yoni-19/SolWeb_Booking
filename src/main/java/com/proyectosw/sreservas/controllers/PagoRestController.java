@@ -13,40 +13,45 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.proyectosw.sreservas.model.Pago;
+import com.proyectosw.sreservas.dto.PagoRequest;
+import com.proyectosw.sreservas.dto.PagoResponse;
 import com.proyectosw.sreservas.service.PagoService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-@RestController 
-@RequestMapping ("api/pagos")
-@RequiredArgsConstructor 
+@RestController
+@RequestMapping ("/api/pagos")
+@RequiredArgsConstructor
 public class PagoRestController {
     private final PagoService service;
 
     @GetMapping
-    public ResponseEntity<List<Pago>> listarTodos() {
-        return ResponseEntity.ok(service.listarTodos());
+    public ResponseEntity<List<PagoResponse>> listarTodos() {
+        List<PagoResponse> pagos = service.listarTodos().stream()
+                .map(PagoResponse::toResponse)
+                .toList();
+        return ResponseEntity.ok(pagos);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Pago> buscarPorId(@PathVariable Integer id) {
+    public ResponseEntity<PagoResponse> buscarPorId(@PathVariable Integer id) {
         return service.buscarPorId(id)
+                .map(PagoResponse::toResponse)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Pago> crear(@Valid @RequestBody Pago pago) {
-        Pago nuevo = service.crear(pago);
+    public ResponseEntity<PagoResponse> crear(@Valid @RequestBody PagoRequest request) {
+        PagoResponse nuevo = PagoResponse.toResponse(service.crear(request.toEntity()));
         return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Pago> actualizar(@PathVariable Integer id,
-                                            @RequestBody Pago pago) {
-        return ResponseEntity.ok(service.actualizar(id, pago));
+    public ResponseEntity<PagoResponse> actualizar(@PathVariable Integer id,
+                                                   @Valid @RequestBody PagoRequest request) {
+        return ResponseEntity.ok(PagoResponse.toResponse(service.actualizar(id, request.toEntity())));
     }
 
     @DeleteMapping("/{id}")
