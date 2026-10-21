@@ -15,6 +15,7 @@ import com.proyectosw.sreservas.model.Cancha;
 import com.proyectosw.sreservas.model.Reserva;
 import com.proyectosw.sreservas.model.Usuario;
 import com.proyectosw.sreservas.model.enums.EstadoReserva;
+import com.proyectosw.sreservas.model.enums.Rol;
 import com.proyectosw.sreservas.repository.CanchaRepository;
 import com.proyectosw.sreservas.repository.ReservaRepository;
 import com.proyectosw.sreservas.repository.UsuarioRepository;
@@ -31,13 +32,21 @@ public class ReservaService {
     private final ReservaRepository repository;
     private final CanchaRepository canchaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final CurrentUserService currentUser;
 
+    /** ADMIN y RECEPCIONISTA ven todas las reservas; CLIENTE solo las propias. */
     public List<Reserva> listarTodos(){
+        Usuario actual = currentUser.get();
+        if (Rol.CLIENTE.equals(actual.getRol())) {
+            return repository.findByUsuario_Id(actual.getId());
+        }
         return repository.findAll();
     }
 
     public Optional<Reserva> buscarPorId(Integer id) {
-        return repository.findById(id);
+        Optional<Reserva> reserva = repository.findById(id);
+        reserva.ifPresent(this::verificarPropiedad);
+        return reserva;
     }
 
     @Transactional 
@@ -45,7 +54,10 @@ public class ReservaService {
         if (reserva.getCancha() == null || reserva.getCancha().getId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La reserva debe indicar una cancha");
         }
-        if (reserva.getUsuario() == null || reserva.getUsuario().getId() == null) {
+
+        Usuario actual = currentUser.get();
+        boolean esCliente = Rol.CLIENTE.equals(actual.getRol());
+        if (!esCliente && (reserva.getUsuario() == null || reserva.getUsuario().getId() == null)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La reserva debe indicar un usuario");
         }
 
@@ -57,10 +69,15 @@ public class ReservaService {
         }
         reserva.setCancha(cancha);
 
-        Usuario usuario = usuarioRepository.findById(reserva.getUsuario().getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "No existe el usuario con id " + reserva.getUsuario().getId()));
-        reserva.setUsuario(usuario);
+        if (esCliente) {
+            // El cliente reserva siempre para si mismo: se ignora el usuarioId del cuerpo.
+            reserva.setUsuario(actual);
+        } else {
+            Usuario usuario = usuarioRepository.findById(reserva.getUsuario().getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "No existe el usuario con id " + reserva.getUsuario().getId()));
+            reserva.setUsuario(usuario);
+        }
 
         if (!reserva.getFechaHoraFin().isAfter(reserva.getFechaHoraInicio())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de fin debe ser posterior a la de inicio");
@@ -112,6 +129,16 @@ public class ReservaService {
                     "No existe reserva con id " + id);
         }
         repository.deleteById(id);
+    }
+
+    /** Un cliente no puede ver reservas ajenas; el personal si. */
+    private void verificarPropiedad(Reserva reserva) {
+        Usuario actual = currentUser.get();
+        if (Rol.CLIENTE.equals(actual.getRol())
+                && !reserva.getUsuario().getId().equals(actual.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "La reserva pertenece a otro usuario");
+        }
     }
 
     private void verificarSolapamiento(Integer canchaId, Integer reservaPropiaId,

@@ -2,6 +2,7 @@ package com.proyectosw.sreservas.repository;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -36,4 +37,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer>{
 
     /** True if the court has any reservation; blocks the deletion of the court. */
     boolean existsByCancha_Id(Integer canchaId);
+
+    /** Reservations of a single user: the client only sees their own. */
+    List<Reserva> findByUsuario_Id(Integer usuarioId);
 }

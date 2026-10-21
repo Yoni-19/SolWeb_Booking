@@ -12,6 +12,10 @@ import jakarta.validation.constraints.NotNull;
  * Create/update payload for a reservation. References {@code usuario} and
  * {@code cancha} by id only; {@code estadoReserva} and {@code montoTotal}
  * are computed by the service and therefore excluded.
+ *
+ * {@code usuarioId} is optional in the payload: a CLIENTE books for itself and
+ * the service overwrites whatever id arrives, while ADMIN and RECEPCIONISTA
+ * must send it.
  */
 public record ReservaRequest(
         @NotNull(message = "La fecha y hora de inicio es obligatoria")
@@ -23,7 +27,6 @@ public record ReservaRequest(
         @NotNull(message = "La reserva debe indicar una cancha")
         Integer canchaId,
 
-        @NotNull(message = "La reserva debe indicar un usuario")
         Integer usuarioId
 ) {
     public Reserva toEntity() {
