@@ -12,6 +12,14 @@
   grid-column: 1 / -1;
 }
 
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mat-sys-error);
+  font-size: 0.9rem;
+}
+
 .form-actions {
   grid-column: 1 / -1;
   display: flex;

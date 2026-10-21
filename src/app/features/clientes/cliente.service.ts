@@ -1,42 +1,45 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { Cliente } from '../../core/models/cliente.model';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable, catchError, of, throwError } from 'rxjs';
+import { API_BASE } from '../../core/api.constants';
+import { Cliente, ClienteAlta, ClienteEdicion } from '../../core/models/cliente.model';
 
 /**
- * MOCK DATA — in-memory replacement for a future real HTTP service.
- * Maps 1:1 to GET/POST/PUT /api/usuarios (client view, no password).
+ * Real HTTP service — talks to the Spring Boot backend.
+ * Method names mirror the REST endpoints (GET/POST/PUT/DELETE /api/usuarios).
  */
 @Injectable({ providedIn: 'root' })
 export class ClienteService {
-  private data: Cliente[] = [
-    { id: 1, nombres: 'Juan', apellidos: 'Pérez', correo: 'juan@email.com' },
-    { id: 2, nombres: 'María', apellidos: 'Gómez', correo: 'maria@email.com' },
-    { id: 3, nombres: 'Carlos', apellidos: 'Ruiz', correo: 'carlos@email.com' },
-    { id: 4, nombres: 'Ana', apellidos: 'Torres', correo: 'ana@email.com' },
-    { id: 5, nombres: 'Luis', apellidos: 'Fernández', correo: 'luis@email.com' },
-  ];
+  private readonly http = inject(HttpClient);
+  private readonly url = `${API_BASE}/api/usuarios`;
 
   list(): Observable<Cliente[]> {
-    return of(this.data.map((c) => ({ ...c })));
+    return this.http.get<Cliente[]>(this.url);
   }
 
   get(id: number): Observable<Cliente | undefined> {
-    return of(this.data.find((c) => c.id === id));
+    return this.http.get<Cliente>(`${this.url}/${id}`).pipe(
+      catchError((err: HttpErrorResponse) => (err.status === 404 ? of(undefined) : throwError(() => err))),
+    );
   }
 
-  create(cliente: Omit<Cliente, 'id'>): Observable<Cliente> {
-    const nuevo: Cliente = { ...cliente, id: Math.max(0, ...this.data.map((c) => c.id ?? 0)) + 1 };
-    this.data.push(nuevo);
-    return of({ ...nuevo });
+  create(cliente: ClienteAlta): Observable<Cliente> {
+    return this.http.post<Cliente>(this.url, cliente);
   }
 
-  update(cliente: Cliente): Observable<Cliente> {
-    this.data = this.data.map((c) => (c.id === cliente.id ? { ...cliente } : c));
-    return of({ ...cliente });
+  update(cliente: Cliente, clave?: string): Observable<Cliente> {
+    const payload: ClienteEdicion = {
+      nombres: cliente.nombres,
+      apellidos: cliente.apellidos,
+      correo: cliente.correo,
+    };
+    if (clave) {
+      payload.clave = clave;
+    }
+    return this.http.put<Cliente>(`${this.url}/${cliente.id}`, payload);
   }
 
   remove(id: number): Observable<void> {
-    this.data = this.data.filter((c) => c.id !== id);
-    return of(undefined);
+    return this.http.delete<void>(`${this.url}/${id}`);
   }
 }

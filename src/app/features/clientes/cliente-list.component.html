@@ -1,13 +1,21 @@
 <section class="page">
   <app-page-header title="Clientes" subtitle="Usuarios registrados en el sistema">
     <mat-chip-set>
-      <mat-chip>Datos simulados</mat-chip>
+      <mat-chip>Datos reales</mat-chip>
     </mat-chip-set>
     <a mat-flat-button color="primary" routerLink="/clientes/nueva">
       <mat-icon>add</mat-icon>
       <span>Nuevo cliente</span>
     </a>
   </app-page-header>
+
+  @if (loading()) {
+    <div class="cliente-estado-carga">
+      <mat-spinner diameter="32" strokeWidth="3" />
+    </div>
+  } @else if (clientes().length === 0) {
+    <p class="cliente-vacio">No hay clientes registrados.</p>
+  }
 
   <div class="table-wrap">
     <table mat-table [dataSource]="clientes()" class="cliente-table">

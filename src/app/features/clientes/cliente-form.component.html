@@ -1,7 +1,7 @@
 <section class="page">
   <app-page-header [title]="isEdit() ? 'Editar cliente' : 'Nuevo cliente'" subtitle="Datos del cliente">
     <mat-chip-set>
-      <mat-chip>Datos simulados</mat-chip>
+      <mat-chip>Datos reales</mat-chip>
     </mat-chip-set>
   </app-page-header>
 
@@ -13,6 +13,8 @@
           <input matInput formControlName="nombres" />
           @if (form.controls.nombres.hasError('required')) {
             <mat-error>Los nombres son obligatorios</mat-error>
+          } @else if (form.controls.nombres.hasError('minlength')) {
+            <mat-error>Mínimo 2 caracteres</mat-error>
           }
         </mat-form-field>
 
@@ -21,6 +23,8 @@
           <input matInput formControlName="apellidos" />
           @if (form.controls.apellidos.hasError('required')) {
             <mat-error>Los apellidos son obligatorios</mat-error>
+          } @else if (form.controls.apellidos.hasError('minlength')) {
+            <mat-error>Mínimo 2 caracteres</mat-error>
           }
         </mat-form-field>
 
@@ -34,11 +38,37 @@
           }
         </mat-form-field>
 
+        @if (!isEdit()) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Contraseña</mat-label>
+            <input matInput type="password" formControlName="clave" autocomplete="new-password" />
+            @if (form.controls.clave.hasError('required')) {
+              <mat-error>La contraseña es obligatoria</mat-error>
+            } @else if (form.controls.clave.hasError('minlength')) {
+              <mat-error>Mínimo 2 caracteres</mat-error>
+            }
+            <mat-hint>Es la contraseña con la que el cliente inicia sesión</mat-hint>
+          </mat-form-field>
+        }
+
+        @if (errorMessage()) {
+          <div class="full-width form-error" role="alert">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorMessage() }}</span>
+          </div>
+        }
+
         <div class="form-actions">
           <a mat-button routerLink="/clientes">Cancelar</a>
-          <button mat-flat-button color="primary" type="submit">
-            <mat-icon>save</mat-icon>
-            <span>{{ isEdit() ? 'Guardar cambios' : 'Registrar cliente' }}</span>
+          <button mat-flat-button color="primary" type="submit" [disabled]="loading()">
+            @if (loading()) {
+              <mat-spinner diameter="20" strokeWidth="3" />
+            } @else {
+              <ng-container>
+                <mat-icon>save</mat-icon>
+                <span>{{ isEdit() ? 'Guardar cambios' : 'Registrar cliente' }}</span>
+              </ng-container>
+            }
           </button>
         </div>
       </form>
