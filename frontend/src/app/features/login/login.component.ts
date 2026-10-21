@@ -5,14 +5,15 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ActivatedRoute, Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, MatCardModule, MatInputModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [ReactiveFormsModule, MatCardModule, MatInputModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, RouterLink],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -21,6 +22,7 @@ export class LoginComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly snackBar = inject(MatSnackBar);
 
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -29,6 +31,12 @@ export class LoginComponent {
     correo: ['', [Validators.required, Validators.email]],
     clave: ['', Validators.required],
   });
+
+  constructor() {
+    if (this.route.snapshot.queryParams['registrado'] === '1') {
+      this.snackBar.open('Cuenta creada. Ya puedes iniciar sesión.', 'Cerrar', { duration: 4000 });
+    }
+  }
 
   submit(): void {
     if (this.form.invalid) {

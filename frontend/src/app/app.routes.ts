@@ -7,12 +7,14 @@ import { ClienteFormComponent } from './features/clientes/cliente-form.component
 import { ClienteListComponent } from './features/clientes/cliente-list.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { LoginComponent } from './features/login/login.component';
+import { RegistroComponent } from './features/registro/registro.component';
 import { ReservaFormComponent } from './features/reservas/reserva-form.component';
 import { ReservaListComponent } from './features/reservas/reserva-list.component';
 import { LayoutComponent } from './shared/layout/layout.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
+  { path: 'registro', component: RegistroComponent },
   {
     path: '',
     component: LayoutComponent,
