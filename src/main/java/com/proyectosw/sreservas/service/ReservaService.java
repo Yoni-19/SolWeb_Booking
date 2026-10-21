@@ -2,6 +2,8 @@ package com.proyectosw.sreservas.service;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,6 +25,9 @@ import lombok.RequiredArgsConstructor;
 @Service 
 @RequiredArgsConstructor 
 public class ReservaService {
+    private static final Collection<EstadoReserva> ESTADOS_QUE_OCUPAN =
+            List.of(EstadoReserva.PENDIENTE, EstadoReserva.CONFIRMADA, EstadoReserva.COMPLETADA);
+
     private final ReservaRepository repository;
     private final CanchaRepository canchaRepository;
     private final UsuarioRepository usuarioRepository;
@@ -60,6 +65,8 @@ public class ReservaService {
         if (!reserva.getFechaHoraFin().isAfter(reserva.getFechaHoraInicio())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de fin debe ser posterior a la de inicio");
         }
+        verificarSolapamiento(cancha.getId(), null,
+                reserva.getFechaHoraInicio(), reserva.getFechaHoraFin());
 
         reserva.setEstadoReserva(EstadoReserva.PENDIENTE);
         recalcularMonto(reserva);
@@ -90,6 +97,8 @@ public class ReservaService {
         if (!existente.getFechaHoraFin().isAfter(existente.getFechaHoraInicio())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de fin debe ser posterior a la de inicio");
         }
+        verificarSolapamiento(existente.getCancha().getId(), id,
+                existente.getFechaHoraInicio(), existente.getFechaHoraFin());
 
         recalcularMonto(existente);
 
@@ -103,6 +112,16 @@ public class ReservaService {
                     "No existe reserva con id " + id);
         }
         repository.deleteById(id);
+    }
+
+    private void verificarSolapamiento(Integer canchaId, Integer reservaPropiaId,
+                                       LocalDateTime inicio, LocalDateTime fin) {
+        boolean ocupada = repository.existeSolapamiento(canchaId, reservaPropiaId,
+                ESTADOS_QUE_OCUPAN, inicio, fin);
+        if (ocupada) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La cancha ya está reservada en ese horario");
+        }
     }
 
     private void recalcularMonto(Reserva reserva) {
