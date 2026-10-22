@@ -33,8 +33,12 @@ Estado actual:
 
 - `.vscode/settings.json` trae `"java.jdt.ls.javac.enabled": "on"` → el LS compila con javac
   y usa el Lombok 1.18.46 del proyecto. **Requiere *Developer: Reload Window* para aplicar.**
-- `java.autobuild.enabled` está en `false` a propósito: el IDE no debe pisar `target/classes`
-  en cada guardado.
+- `java.autobuild.enabled` está en `true`: el IDE compila al abrir/guardar para que el botón
+  Run encuentre las clases en `target/classes` también en un clon limpio (donde `target/` no
+  existe porque está ignorado por git).
+- Con autobuild activo, evitá `.\mvnw.cmd clean` mientras VS Code compila (o cerrá la ventana):
+  los dos procesos se pelean por `target/`. Si `clean` falla por archivos bloqueados, borrá
+  `target/` a mano y volvé a compilar.
 
 Si aparece ese `VerifyError`: **no es bug del código**. `.\mvnw.cmd clean compile` y seguí.
 Para auditar el bytecode: `javap -c -p -cp target/classes com.proyectosw.sreservas.config.SecurityConfig`

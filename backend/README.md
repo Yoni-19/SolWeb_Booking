@@ -28,6 +28,14 @@ cd backend
 .\mvnw.cmd test               # tests (requiere MySQL arriba)
 ```
 
+### En VS Code
+
+1. Abrí el workspace **raíz** (`SistemaComplejoDeportivo`), no solo `backend/`.
+2. Esperá a que la extensión de Java termine de compilar (barra de estado "Java: Ready").
+3. Abrí `SreservasApplication.java` y usá el botón **Run**.
+4. Alternativa a prueba de balas: `Terminal > Run Task > backend: run`, o el comando Maven
+   de arriba.
+
 La base se inicializa sola: `spring.jpa.hibernate.ddl-auto=update` crea el esquema y
 `src/main/resources/data.sql` inserta los datos iniciales de forma idempotente
 (`INSERT IGNORE`), así que se puede volver a correr sin duplicar nada.
