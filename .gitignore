@@ -9,6 +9,9 @@
 !/.vscode/launch.json
 !/.vscode/extensions.json
 
+# Herramientas
+/.atl/
+
 # Sistema
 Thumbs.db
 .DS_Store
