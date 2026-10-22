@@ -27,15 +27,22 @@ export class ReservaListComponent {
 
   readonly reservas = signal<Reserva[]>([]);
   readonly loading = signal(true);
-  /** Un CLIENTE solo puede crear reservas: el backend le bloquea editar y eliminar. */
-  readonly puedeGestionar = computed(() => !this.auth.esCliente());
+  /** El rol decide las columnas y los botones; el backend igual valida la propiedad. */
+  readonly rol = computed(() => this.auth.sesion()?.rol);
+  readonly esCliente = computed(() => this.rol() === 'CLIENTE');
+  readonly puedeGestionar = computed(() => !!this.rol());
   readonly displayedColumns = computed(() =>
-    this.puedeGestionar()
-      ? ['id', 'cancha', 'cliente', 'inicio', 'estado', 'monto', 'acciones']
-      : ['id', 'cancha', 'inicio', 'estado', 'monto'],
+    this.esCliente()
+      ? ['id', 'cancha', 'inicio', 'estado', 'monto', 'acciones']
+      : ['id', 'cancha', 'cliente', 'inicio', 'estado', 'monto', 'acciones'],
   );
 
   constructor() {
+    // El rol no viaja en el token: hay que pedirlo para saber que columnas mostrar.
+    if (this.auth.isAuthenticated) {
+      this.auth.asegurarSesion().subscribe();
+    }
+
     this.service.list().subscribe({
       next: (reservas) => {
         this.reservas.set(reservas);

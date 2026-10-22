@@ -66,6 +66,10 @@ Para auditar el bytecode: `javap -c -p -cp target/classes com.proyectosw.sreserv
   exige `ADMIN`. Quitar el rol al último `ADMIN` → `409`.
 - Matriz en `SecurityConfig`; permisos a nivel de fila (reserva ajena) en `ReservaService`.
   Un `403` pasa por `AccessDeniedHandler` (envelope JSON), no por el handler por defecto.
+- `PUT` y `DELETE /api/reservas/**` aceptan a los tres roles, pero `ReservaService.actualizar` y
+  `eliminar` llaman a `verificarPropiedad`: un `CLIENTE` solo toca sus reservas (si no, `403`).
+  Nunca mover esa validación solo a `SecurityConfig`: ahí no se conoce el dueño de la fila.
+- Una reserva `COMPLETADA` no se reprograma ni se cancela (`409`).
 - Los tests de la matriz están en `config/SeguridadPorRolTests` (login real contra el seed).
 
 ### Trampa: agregar una columna `NOT NULL` a una tabla con filas

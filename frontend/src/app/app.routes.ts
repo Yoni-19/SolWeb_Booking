@@ -26,7 +26,7 @@ export const routes: Routes = [
       {
         path: 'reservas/:id/editar',
         component: ReservaFormComponent,
-        canActivate: [roleGuard('ADMIN', 'RECEPCIONISTA')],
+        canActivate: [roleGuard('ADMIN', 'RECEPCIONISTA', 'CLIENTE')],
       },
       { path: 'canchas', component: CanchaListComponent, canActivate: [roleGuard('ADMIN')] },
       { path: 'canchas/nueva', component: CanchaFormComponent, canActivate: [roleGuard('ADMIN')] },

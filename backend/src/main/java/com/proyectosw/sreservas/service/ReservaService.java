@@ -97,6 +97,14 @@ public class ReservaService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No existe la reserva con id " + id));
 
+        // Un CLIENTE solo reprograma sus propias reservas; el personal puede con todas.
+        verificarPropiedad(existente);
+
+        if (existente.getEstadoReserva() == EstadoReserva.COMPLETADA) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede reprogramar una reserva completada");
+        }
+
         if (datos.getFechaHoraInicio() != null) existente.setFechaHoraInicio(datos.getFechaHoraInicio());
         if (datos.getFechaHoraFin() != null)     existente.setFechaHoraFin(datos.getFechaHoraFin());
 
@@ -124,11 +132,18 @@ public class ReservaService {
 
     @Transactional
     public void eliminar(Integer id) {
-        if (!repository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "No existe reserva con id " + id);
+        Reserva existente = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No existe reserva con id " + id));
+
+        // Un CLIENTE solo cancela sus propias reservas.
+        verificarPropiedad(existente);
+
+        if (existente.getEstadoReserva() == EstadoReserva.COMPLETADA) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede cancelar una reserva completada");
         }
-        repository.deleteById(id);
+        repository.delete(existente);
     }
 
     /** Un cliente no puede ver reservas ajenas; el personal si. */

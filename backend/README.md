@@ -80,8 +80,12 @@ nunca viaja en el token** y un cambio de rol aplica al instante. El frontend lo 
 | Crear/editar/eliminar clientes y cambiar roles | sí | no | no |
 | Ver todas las reservas | sí | sí | solo las propias |
 | Crear reserva | sí | sí | sí (a su nombre) |
-| Editar/eliminar reserva | sí | sí | no |
+| Editar/eliminar reserva | sí | sí | solo las propias |
 | Pagos | sí | sí | no (fase 2) |
+
+Un `CLIENTE` puede reprogramar o cancelar **sus** reservas: el `403` por reserva ajena lo aplica
+`ReservaService.verificarPropiedad`. Las reservas `COMPLETADA` no se reprograman ni se cancelan
+(`409`).
 
 Un rol sin permiso recibe `403` con el envelope JSON `{ timestamp, status, error, message }`.
 

@@ -50,7 +50,7 @@ class SeguridadPorRolTests {
     }
 
     @Test
-    void elClienteConsultaCanchasYReservasPeroNoUsuariosNiEditaReservas() throws Exception {
+    void elClienteConsultaCanchasYReservasPeroNoUsuariosNiReservasAjenas() throws Exception {
         String token = tokenDe("laura@email.com", CLAVE_SEED);
 
         mockMvc.perform(get("/api/canchas").header("Authorization", "Bearer " + token))
@@ -59,8 +59,12 @@ class SeguridadPorRolTests {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/usuarios").header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(put("/api/reservas/1").header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+        // La reserva 2 del seed pertenece a otro usuario: reprogramarla da 403, no 400 ni 200.
+        mockMvc.perform(put("/api/reservas/2").header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fechaHoraInicio":"2026-11-03T09:00:00","fechaHoraFin":"2026-11-03T10:30:00","canchaId":1}
+                                """))
                 .andExpect(status().isForbidden());
     }
 

@@ -53,6 +53,7 @@ propio sigue existiendo y sigue funcionando.
 - Roles: `ADMIN` ⊃ `RECEPCIONISTA` ⊃ `CLIENTE`. El JWT solo lleva el correo; el rol se lee de
   la base en cada request y el frontend lo obtiene de `GET /api/auth/me`.
 - El registro público (`POST /api/usuarios`) crea siempre un `CLIENTE`.
+- Un `CLIENTE` solo ve, reprograma y cancela **sus** reservas (reserva ajena → `403`).
 - Solapamiento de reservas → `409`.
 - Monto por hora iniciada: `horas = (minutos + 59) / 60`.
 - `POST /api/usuarios` exige clave; `PUT /api/usuarios/{id}` la acepta opcional
