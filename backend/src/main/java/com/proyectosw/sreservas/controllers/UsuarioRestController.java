@@ -21,13 +21,15 @@ import com.proyectosw.sreservas.dto.UsuarioUpdateRequest;
 import com.proyectosw.sreservas.service.UsuarioService;
 
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping ("/api/usuarios")
-@RequiredArgsConstructor
 public class UsuarioRestController {
     private final UsuarioService service;
+
+    public UsuarioRestController(final UsuarioService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public ResponseEntity<List<UsuarioResponse>> listarTodos() {

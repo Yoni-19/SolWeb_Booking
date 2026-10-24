@@ -18,13 +18,15 @@ import com.proyectosw.sreservas.dto.CanchaResponse;
 import com.proyectosw.sreservas.service.CanchaService;
 
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping ("/api/canchas")
-@RequiredArgsConstructor
 public class CanchaRestController {
     private final CanchaService service;
+
+    public CanchaRestController(final CanchaService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public ResponseEntity<List<CanchaResponse>> listarTodos() {

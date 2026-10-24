@@ -11,13 +11,14 @@ import com.proyectosw.sreservas.model.Usuario;
 import com.proyectosw.sreservas.model.enums.Rol;
 import com.proyectosw.sreservas.repository.UsuarioRepository;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
-@RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UsuarioRepository usuarioRepository;
+
+    public UserDetailsServiceImpl(final UsuarioRepository usuarioRepository) {
+        this.usuarioRepository = usuarioRepository;
+    }
 
     @Override
     public UserDetails loadUserByUsername(String correo) throws UsernameNotFoundException {

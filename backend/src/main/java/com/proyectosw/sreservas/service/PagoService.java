@@ -15,13 +15,16 @@ import com.proyectosw.sreservas.repository.PagoRepository;
 import com.proyectosw.sreservas.repository.ReservaRepository;
 
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
 
-@Service 
-@RequiredArgsConstructor 
+@Service
 public class PagoService {
     private final PagoRepository repository;
     private final ReservaRepository reservaRepository;
+
+    public PagoService(final PagoRepository repository, final ReservaRepository reservaRepository) {
+        this.repository = repository;
+        this.reservaRepository = reservaRepository;
+    }
 
     public List<Pago> listarTodos() { 
         return repository.findAll(); 

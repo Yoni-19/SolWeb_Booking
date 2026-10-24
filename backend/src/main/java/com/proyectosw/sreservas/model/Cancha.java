@@ -15,14 +15,8 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Entity 
-@Getter 
-@Setter 
-@NoArgsConstructor 
+@Entity
 public class Cancha {
     @Id @GeneratedValue (strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -44,5 +38,48 @@ public class Cancha {
 
     @Column (nullable = false)
     private boolean activa;
+
+    public Cancha() {
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public TipoDeporte getDeporte() {
+        return deporte;
+    }
+
+    public void setDeporte(TipoDeporte deporte) {
+        this.deporte = deporte;
+    }
+
+    public BigDecimal getPrecioPorHora() {
+        return precioPorHora;
+    }
+
+    public void setPrecioPorHora(BigDecimal precioPorHora) {
+        this.precioPorHora = precioPorHora;
+    }
+
+    public boolean isActiva() {
+        return activa;
+    }
+
+    public void setActiva(boolean activa) {
+        this.activa = activa;
+    }
 
 }

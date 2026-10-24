@@ -32,14 +32,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tools.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 
-@Configuration 
-@EnableWebSecurity 
-@RequiredArgsConstructor 
+@Configuration
+@EnableWebSecurity
 public class SecurityConfig {
 
     private final JwtAuthFilter filter;
+
+    public SecurityConfig(final JwtAuthFilter filter) {
+        this.filter = filter;
+    }
 
     @Bean 
     AuthenticationManager authenticationManager (AuthenticationConfiguration configuration) throws Exception{

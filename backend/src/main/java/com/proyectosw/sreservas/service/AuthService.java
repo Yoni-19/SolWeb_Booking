@@ -10,14 +10,16 @@ import org.springframework.web.server.ResponseStatusException;
 import com.proyectosw.sreservas.dto.AuthResponse;
 import com.proyectosw.sreservas.dto.LoginRequest;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
-@RequiredArgsConstructor
 public class AuthService {
 
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+
+    public AuthService(final AuthenticationManager authenticationManager, final JwtService jwtService) {
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
+    }
 
     public AuthResponse login(LoginRequest request) {
         try {

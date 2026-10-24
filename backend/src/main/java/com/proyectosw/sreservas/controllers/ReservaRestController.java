@@ -19,13 +19,15 @@ import com.proyectosw.sreservas.dto.ReservaResponse;
 import com.proyectosw.sreservas.service.ReservaService;
 
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping ("/api/reservas")
-@RequiredArgsConstructor
 public class ReservaRestController {
     private final ReservaService service;
+
+    public ReservaRestController(final ReservaService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public ResponseEntity<List<ReservaResponse>> listarTodos(){

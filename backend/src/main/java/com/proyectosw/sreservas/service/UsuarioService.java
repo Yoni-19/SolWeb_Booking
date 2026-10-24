@@ -14,14 +14,19 @@ import com.proyectosw.sreservas.repository.ReservaRepository;
 import com.proyectosw.sreservas.repository.UsuarioRepository;
 
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
 
-@Service 
-@RequiredArgsConstructor 
+@Service
 public class UsuarioService {
     private final UsuarioRepository repository;
     private final ReservaRepository reservaRepository;
     private final PasswordEncoder passwordEncoder;
+
+    public UsuarioService(final UsuarioRepository repository, final ReservaRepository reservaRepository,
+            final PasswordEncoder passwordEncoder) {
+        this.repository = repository;
+        this.reservaRepository = reservaRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     public List<Usuario> listarTodos() {
         return repository.findAll();

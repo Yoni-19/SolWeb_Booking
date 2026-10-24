@@ -10,8 +10,6 @@ import com.proyectosw.sreservas.model.Usuario;
 import com.proyectosw.sreservas.model.enums.Rol;
 import com.proyectosw.sreservas.repository.UsuarioRepository;
 
-import lombok.RequiredArgsConstructor;
-
 /**
  * Resuelve el usuario autenticado de la peticion en curso.
  *
@@ -20,10 +18,13 @@ import lombok.RequiredArgsConstructor;
  * emitidos antes siguen siendo validos.
  */
 @Service
-@RequiredArgsConstructor
 public class CurrentUserService {
 
     private final UsuarioRepository usuarioRepository;
+
+    public CurrentUserService(final UsuarioRepository usuarioRepository) {
+        this.usuarioRepository = usuarioRepository;
+    }
 
     public Usuario get() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

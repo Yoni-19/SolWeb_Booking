@@ -12,13 +12,16 @@ import com.proyectosw.sreservas.repository.CanchaRepository;
 import com.proyectosw.sreservas.repository.ReservaRepository;
 
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
 
-@Service 
-@RequiredArgsConstructor 
+@Service
 public class CanchaService {
     private final CanchaRepository repository;
     private final ReservaRepository reservaRepository;
+
+    public CanchaService(final CanchaRepository repository, final ReservaRepository reservaRepository) {
+        this.repository = repository;
+        this.reservaRepository = reservaRepository;
+    }
 
     public List<Cancha> listarTodos(){
         return repository.findAll();

@@ -21,10 +21,8 @@ import com.proyectosw.sreservas.repository.ReservaRepository;
 import com.proyectosw.sreservas.repository.UsuarioRepository;
 
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
 
-@Service 
-@RequiredArgsConstructor 
+@Service
 public class ReservaService {
     private static final Collection<EstadoReserva> ESTADOS_QUE_OCUPAN =
             List.of(EstadoReserva.PENDIENTE, EstadoReserva.CONFIRMADA, EstadoReserva.COMPLETADA);
@@ -33,6 +31,14 @@ public class ReservaService {
     private final CanchaRepository canchaRepository;
     private final UsuarioRepository usuarioRepository;
     private final CurrentUserService currentUser;
+
+    public ReservaService(final ReservaRepository repository, final CanchaRepository canchaRepository,
+            final UsuarioRepository usuarioRepository, final CurrentUserService currentUser) {
+        this.repository = repository;
+        this.canchaRepository = canchaRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.currentUser = currentUser;
+    }
 
     /** ADMIN y RECEPCIONISTA ven todas las reservas; CLIENTE solo las propias. */
     public List<Reserva> listarTodos(){

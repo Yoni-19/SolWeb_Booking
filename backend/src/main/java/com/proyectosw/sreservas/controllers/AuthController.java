@@ -14,15 +14,18 @@ import com.proyectosw.sreservas.service.AuthService;
 import com.proyectosw.sreservas.service.CurrentUserService;
 
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
     private final CurrentUserService currentUserService;
+
+    public AuthController(final AuthService authService, final CurrentUserService currentUserService) {
+        this.authService = authService;
+        this.currentUserService = currentUserService;
+    }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {

@@ -18,13 +18,15 @@ import com.proyectosw.sreservas.dto.PagoResponse;
 import com.proyectosw.sreservas.service.PagoService;
 
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping ("/api/pagos")
-@RequiredArgsConstructor
 public class PagoRestController {
     private final PagoService service;
+
+    public PagoRestController(final PagoService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public ResponseEntity<List<PagoResponse>> listarTodos() {
