@@ -21,7 +21,7 @@ Cada subproyecto tiene su propio `.gitignore` y su documentación:
 
 | Parte | Tecnología |
 |---|---|
-| Backend | Java 25, Spring Boot 4.1.1, Spring Security + JWT, Spring Data JPA, MySQL 8.0, Lombok |
+| Backend | Java 25, Spring Boot 4.1.1, Spring Security + JWT, Spring Data JPA, MySQL 8.0 |
 | Frontend | Angular 22 (standalone, signals), Angular Material 22, TypeScript 6, RxJS 7.8 |
 
 ## Requisitos

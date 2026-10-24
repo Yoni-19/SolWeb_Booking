@@ -23,26 +23,40 @@ de `target/`. Mientras la app esté en ejecución usá **solo** `.\mvnw.cmd comp
 `spring-boot-devtools` está en el `pom.xml`: al recompilar, la app **se reinicia sola** con las
 clases nuevas. No hace falta bajar y volver a levantar para probar un cambio de código.
 
-## Trampa activa: Lombok + JDK 25
+## Sin Lombok (desde 2026-10-24)
 
-El LS de VS Code (`redhat.java`) compila con ECJ usando su Lombok embebido **1.18.39**, que
-no soporta JDK 25 (soporte JDK 25 llegó en 1.18.40). Genera constructores sin `super()` →
-`VerifyError: Constructor must call super() or this() before return`.
+El proyecto **no usa Lombok**. Las 4 entidades tienen getters, setters y constructor vacío
+explícitos; las 14 clases de `config/`, `controllers/` y `service/` tienen constructor propio
+en lugar de `@RequiredArgsConstructor`. Al agregar un campo `final` nuevo en cualquiera de esas
+clases hay que **agregarlo también al constructor**.
 
-Estado actual:
+Motivo: el LS de VS Code no puede combinar Lombok con JDK 25 (su Lombok embebido es 1.18.39,
+sin soporte de JDK 25) y el modo experimental `java.jdt.ls.javac.enabled: "on"` rompía al leer
+AssertJ. Sin Lombok se usa el modo normal del LS.
 
-- `.vscode/settings.json` trae `"java.jdt.ls.javac.enabled": "on"` → el LS compila con javac
-  y usa el Lombok 1.18.46 del proyecto. **Requiere *Developer: Reload Window* para aplicar.**
-- `java.autobuild.enabled` está en `true`: el IDE compila al abrir/guardar para que el botón
-  Run encuentre las clases en `target/classes` también en un clon limpio (donde `target/` no
-  existe porque está ignorado por git).
-- Con autobuild activo, evitá `.\mvnw.cmd clean` mientras VS Code compila (o cerrá la ventana):
-  los dos procesos se pelean por `target/`. Si `clean` falla por archivos bloqueados, borrá
-  `target/` a mano y volvé a compilar.
+Estado de `.vscode/settings.json` (raíz y `backend/`):
 
-Si aparece ese `VerifyError`: **no es bug del código**. `.\mvnw.cmd clean compile` y seguí.
-Para auditar el bytecode: `javap -c -p -cp target/classes com.proyectosw.sreservas.config.SecurityConfig`
-— el constructor debe mostrar `invokespecial java/lang/Object."<init>"`.
+- `"java.jdt.ls.javac.enabled": "off"` — modo normal. **Requiere *Developer: Reload Window*.**
+- `"java.autobuild.enabled": true` — el IDE compila al abrir/guardar para que el botón Run
+  encuentre las clases en `target/classes` también en un clon limpio (donde `target/` no
+  existe porque está gitignoreado).
+
+## Trampa activa: el IDE compila en `target/classes` sin `-parameters`
+
+El LS escribe en el mismo `target/classes` que Maven. Ese bytecode puede quedar sin la bandera
+`-parameters`, y Spring entonces no resuelve `@PathVariable Integer id` sin nombre explícito:
+
+```
+IllegalArgumentException: Name for argument of type [java.lang.Integer] not specified
+```
+
+El síntoma es un `500 Internal Server Error` en cualquier `PUT`/`DELETE` con id de ruta,
+aunque todo compile. Si aparece después de que el IDE recompiló: borrá `target/` y corré
+`.\mvnw.cmd clean compile` (o `.\mvnw.cmd test`, que recompila con `[debug parameters release 25]`).
+
+Con autobuild activo, evitá `.\mvnw.cmd clean` mientras VS Code compila (o cerrá la ventana):
+los dos procesos se pelean por `target/`. Si `clean` falla por archivos bloqueados, borrá
+`target/` a mano y volvé a compilar.
 
 ## Convenciones
 

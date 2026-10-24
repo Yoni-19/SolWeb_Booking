@@ -33,7 +33,7 @@ npm run build                 # build de producción
 ## VS Code
 
 El workspace se abre en **la raíz**. VS Code solo lee el `.vscode/` de la raíz, así que ahí
-están el fix de Lombok/JDK 25 (`settings.json`) y las tareas de Angular (`tasks.json`,
+están la configuración de Java (`settings.json`) y las tareas de Angular (`tasks.json`,
 `launch.json`). Si abrís `backend/` como carpeta independiente, su `.vscode/settings.json`
 propio sigue existiendo y sigue funcionando.
 

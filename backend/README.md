@@ -11,7 +11,8 @@ API REST del Sistema de Reservas de un complejo deportivo. Spring Boot sobre MyS
 | Spring Security + JWT (jjwt) | 6.x / 0.12.6 |
 | JPA / Hibernate | 7.4.5 |
 | MySQL | 8.0 |
-| Lombok | 1.18.46 (lo fija el BOM de Spring Boot) |
+
+Sin Lombok: getters, setters y constructores se escriben explícitos.
 
 ## Requisitos
 
@@ -107,42 +108,28 @@ Reglas de negocio implementadas:
 - **Último administrador**: no se puede quitar el rol al último `ADMIN` (`409`).
 - **CORS**: habilitado para `http://localhost:4200` y `http://127.0.0.1:4200` (frontend Angular).
 
-## Gotcha importante: el IDE corrompe el build (Lombok + JDK 25)
+## Gotcha importante: el IDE escribe en `target/classes`
 
-Si el backend falla al arrancar con
+La extensión *Language Support for Java* de VS Code compila en segundo plano y escribe en el
+mismo `target/classes` que Maven. Ese bytecode puede quedar sin la bandera `-parameters`, y
+entonces Spring no puede resolver un `@PathVariable Integer id` sin nombre explícito:
 
 ```
-java.lang.VerifyError: Constructor must call super() or this() before return
+IllegalArgumentException: Name for argument of type [java.lang.Integer] not specified
 ```
 
-no es un error del código: **el bytecode en `target/classes` está corrupto**.
+El síntoma es un `500 Internal Server Error` en cualquier `PUT`/`DELETE` con id de ruta,
+aunque todo compile y los tests del servicio pasen.
 
-**Causa.** La extensión *Language Support for Java* de VS Code compila con ECJ usando el
-Lombok que trae embebido (`lombok-1.18.39-4050.jar`). Lombok sólo ganó soporte de JDK 25 en
-la versión **1.18.40** (4/9/2025, issue #3859), así que sobre JDK 25 ese agente genera
-constructores sin la llamada a `super()` → el verificador de la JVM los rechaza. Maven, en
-cambio, usa Lombok **1.18.46** (el que fija el BOM de Spring Boot) y compila bien.
-
-**Solución.** `.vscode/settings.json` fuerza el modo de compilación por `javac` del
-language server:
-
-```json
-{
-  "java.autobuild.enabled": false,
-  "java.jdt.ls.javac.enabled": "on"
-}
-```
-
-Después de tocar ese archivo hay que recargar la ventana de VS Code
-(*Developer: Reload Window*), porque el valor se lee al iniciar el language server.
-
-**Regla de oro:** el build oficial es Maven. Si el IDE se queda trabado o falla algo raro, se
-arregla con `.\mvnw.cmd clean compile`; nunca con el botón de compilar del IDE.
-
-Para comprobar que el bytecode es válido:
+**Solución.** El build oficial es Maven: borrá `target/` y corré
 
 ```powershell
-javap -c -p -cp target/classes com.proyectosw.sreservas.config.SecurityConfig
+.\mvnw.cmd clean compile
 ```
 
-El constructor debe mostrar `invokespecial java/lang/Object."<init>"`.
+`.\mvnw.cmd test` recompila con `[debug parameters release 25]`, que es lo correcto. Si `clean`
+falla con `Failed to delete ...`, cerrá la ventana de VS Code o borrá `target/` a mano: el
+language server tiene los archivos abiertos.
+
+`.\mvnw.cmd clean` con la app corriendo falla siempre por archivos bloqueados; en ese caso usá
+solo `.\mvnw.cmd compile`.
