@@ -45,10 +45,15 @@ export class DashboardComponent {
 
   private cargar(): void {
     // El backend ya filtra: un CLIENTE recibe solo sus propias reservas.
-    this.reservasService.list().subscribe((reservas) => {
-      this.totalReservas.set(reservas.length);
-      this.reservasPendientes.set(reservas.filter((r) => r.estadoReserva === 'PENDIENTE').length);
-      this.reservasConfirmadas.set(reservas.filter((r) => r.estadoReserva === 'CONFIRMADA').length);
+    // Con size=1 alcanza: solo se usa el total de la pagina, no las filas.
+    this.reservasService.list(0, 1).subscribe((pagina) => {
+      this.totalReservas.set(pagina.page.totalElements);
+    });
+    this.reservasService.list(0, 1, 'PENDIENTE').subscribe((pagina) => {
+      this.reservasPendientes.set(pagina.page.totalElements);
+    });
+    this.reservasService.list(0, 1, 'CONFIRMADA').subscribe((pagina) => {
+      this.reservasConfirmadas.set(pagina.page.totalElements);
     });
 
     // Global counters only make sense (and are only allowed) for staff.
@@ -56,8 +61,8 @@ export class DashboardComponent {
       this.canchasService.list().subscribe((canchas) => {
         this.canchasActivas.set(canchas.filter((c) => c.activa).length);
       });
-      this.clientesService.list().subscribe((clientes) => {
-        this.totalClientes.set(clientes.length);
+      this.clientesService.list(0, 1).subscribe((pagina) => {
+        this.totalClientes.set(pagina.page.totalElements);
       });
     }
   }

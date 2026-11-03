@@ -111,7 +111,7 @@ export class ReservaFormComponent {
       usuarioId.clearValidators();
     } else {
       usuarioId.setValidators(Validators.required);
-      this.clienteService.list().subscribe({
+      this.clienteService.listAll().subscribe({
         next: (clientes) => this.clientes.set(clientes),
         error: (err) => this.errorMessage.set(apiErrorMessage(err, 'No se pudieron cargar los clientes')),
       });

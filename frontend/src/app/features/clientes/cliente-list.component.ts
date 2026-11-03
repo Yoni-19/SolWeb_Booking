@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -9,6 +10,7 @@ import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { apiErrorMessage } from '../../core/http/api-error';
 import { Cliente, Rol, ROL_LABEL } from '../../core/models/cliente.model';
+import { Pagina } from '../../core/models/pagina.model';
 import { AuthService } from '../../core/services/auth.service';
 import { PageHeader } from '../../shared/ui/page-header.component';
 import { ClienteService } from './cliente.service';
@@ -16,7 +18,7 @@ import { ClienteService } from './cliente.service';
 @Component({
   selector: 'app-cliente-list',
   standalone: true,
-  imports: [RouterLink, MatTableModule, MatButtonModule, MatIconModule, MatChipsModule, MatSelectModule, MatProgressSpinnerModule, PageHeader],
+  imports: [RouterLink, MatTableModule, MatButtonModule, MatIconModule, MatChipsModule, MatSelectModule, MatPaginatorModule, MatProgressSpinnerModule, PageHeader],
   templateUrl: './cliente-list.component.html',
   styleUrl: './cliente-list.component.scss',
 })
@@ -25,7 +27,12 @@ export class ClienteListComponent {
   private readonly snackBar = inject(MatSnackBar);
   readonly auth = inject(AuthService);
 
-  readonly clientes = signal<Cliente[]>([]);
+  /** Página actual devuelta por el backend (content + metadatos). */
+  readonly pagina = signal<Pagina<Cliente> | null>(null);
+  readonly clientes = computed(() => this.pagina()?.content ?? []);
+  readonly total = computed(() => this.pagina()?.page.totalElements ?? 0);
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(10);
   readonly loading = signal(true);
   readonly roles: Rol[] = ['ADMIN', 'RECEPCIONISTA', 'CLIENTE'];
   readonly etiquetasRol = ROL_LABEL;
@@ -47,10 +54,13 @@ export class ClienteListComponent {
     return ROL_LABEL[cliente.rol ?? 'CLIENTE'];
   }
 
-  private cargar(): void {
-    this.service.list().subscribe({
-      next: (clientes) => {
-        this.clientes.set(clientes);
+  /** Trae una página del backend; `page` es base 0. */
+  private cargar(page = 0): void {
+    this.loading.set(true);
+    this.service.list(page, this.pageSize()).subscribe({
+      next: (pagina) => {
+        this.pagina.set(pagina);
+        this.pageIndex.set(pagina.page.number);
         this.loading.set(false);
       },
       error: (err) => {
@@ -60,20 +70,29 @@ export class ClienteListComponent {
     });
   }
 
+  cambiarPagina(event: PageEvent): void {
+    this.pageSize.set(event.pageSize);
+    this.cargar(event.pageIndex);
+  }
+
   cambiarRol(cliente: Cliente, rol: Rol): void {
     if (cliente.id == null || cliente.rol === rol) return;
 
     this.cambiando.set(cliente.id);
     this.service.cambiarRol(cliente.id, rol).subscribe({
       next: (actualizado) => {
-        this.clientes.update((list) => list.map((c) => (c.id === actualizado.id ? { ...c, rol: actualizado.rol } : c)));
+        this.pagina.update((pagina) =>
+          pagina
+            ? { ...pagina, content: pagina.content.map((c) => (c.id === actualizado.id ? { ...c, rol: actualizado.rol } : c)) }
+            : pagina,
+        );
         this.cambiando.set(null);
         this.snackBar.open('Rol actualizado.', 'Cerrar', { duration: 2500 });
       },
       error: (err) => {
         this.cambiando.set(null);
         // Se recarga para descartar el valor que el usuario intentó seleccionar.
-        this.cargar();
+        this.cargar(this.pageIndex());
         this.snackBar.open(apiErrorMessage(err, 'No se pudo cambiar el rol'), 'Cerrar', { duration: 5000 });
       },
     });
@@ -83,7 +102,9 @@ export class ClienteListComponent {
     if (cliente.id == null) return;
     this.service.remove(cliente.id).subscribe({
       next: () => {
-        this.clientes.update((list) => list.filter((c) => c.id !== cliente.id));
+        // Si era la única fila de la página, retrocedemos: si no, quedaría vacía.
+        const eraLaUltimaFila = this.clientes().length === 1 && this.pageIndex() > 0;
+        this.cargar(eraLaUltimaFila ? this.pageIndex() - 1 : this.pageIndex());
         this.snackBar.open('Cliente eliminado.', 'Cerrar', { duration: 2500 });
       },
       error: (err) => {

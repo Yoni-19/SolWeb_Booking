@@ -3,11 +3,13 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { apiErrorMessage } from '../../core/http/api-error';
+import { Pagina } from '../../core/models/pagina.model';
 import { Reserva } from '../../core/models/reserva.model';
 import { AuthService } from '../../core/services/auth.service';
 import { PageHeader } from '../../shared/ui/page-header.component';
@@ -16,7 +18,7 @@ import { ReservaService } from './reserva.service';
 @Component({
   selector: 'app-reserva-list',
   standalone: true,
-  imports: [RouterLink, MatTableModule, MatButtonModule, MatIconModule, MatChipsModule, MatProgressSpinnerModule, DatePipe, DecimalPipe, PageHeader],
+  imports: [RouterLink, MatTableModule, MatButtonModule, MatIconModule, MatChipsModule, MatPaginatorModule, MatProgressSpinnerModule, DatePipe, DecimalPipe, PageHeader],
   templateUrl: './reserva-list.component.html',
   styleUrl: './reserva-list.component.scss',
 })
@@ -25,7 +27,12 @@ export class ReservaListComponent {
   private readonly snackBar = inject(MatSnackBar);
   readonly auth = inject(AuthService);
 
-  readonly reservas = signal<Reserva[]>([]);
+  /** Página actual devuelta por el backend (content + metadatos). */
+  readonly pagina = signal<Pagina<Reserva> | null>(null);
+  readonly reservas = computed(() => this.pagina()?.content ?? []);
+  readonly total = computed(() => this.pagina()?.page.totalElements ?? 0);
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(10);
   readonly loading = signal(true);
   /** El rol decide las columnas y los botones; el backend igual valida la propiedad. */
   readonly rol = computed(() => this.auth.sesion()?.rol);
@@ -38,14 +45,17 @@ export class ReservaListComponent {
   );
 
   constructor() {
-    // El rol no viaja en el token: hay que pedirlo para saber que columnas mostrar.
-    if (this.auth.isAuthenticated) {
-      this.auth.asegurarSesion().subscribe();
-    }
+    // El authGuard ya cargo la sesion (y el rol) antes de activar esta ruta.
+    this.cargar();
+  }
 
-    this.service.list().subscribe({
-      next: (reservas) => {
-        this.reservas.set(reservas);
+  /** Trae una página del backend; `page` es base 0. */
+  private cargar(page = 0): void {
+    this.loading.set(true);
+    this.service.list(page, this.pageSize()).subscribe({
+      next: (pagina) => {
+        this.pagina.set(pagina);
+        this.pageIndex.set(pagina.page.number);
         this.loading.set(false);
       },
       error: (err) => {
@@ -55,11 +65,18 @@ export class ReservaListComponent {
     });
   }
 
+  cambiarPagina(event: PageEvent): void {
+    this.pageSize.set(event.pageSize);
+    this.cargar(event.pageIndex);
+  }
+
   eliminar(reserva: Reserva): void {
     if (reserva.id == null) return;
     this.service.remove(reserva.id).subscribe({
       next: () => {
-        this.reservas.update((list) => list.filter((r) => r.id !== reserva.id));
+        // Si era la única fila de la página, retrocedemos: si no, quedaría vacía.
+        const eraLaUltimaFila = this.reservas().length === 1 && this.pageIndex() > 0;
+        this.cargar(eraLaUltimaFila ? this.pageIndex() - 1 : this.pageIndex());
         this.snackBar.open('Reserva eliminada.', 'Cerrar', { duration: 2500 });
       },
       error: (err) => {

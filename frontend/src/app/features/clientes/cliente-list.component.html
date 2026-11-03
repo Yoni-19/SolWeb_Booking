@@ -77,4 +77,13 @@
       <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
     </table>
   </div>
+
+  <mat-paginator
+    [length]="total()"
+    [pageIndex]="pageIndex()"
+    [pageSize]="pageSize()"
+    [pageSizeOptions]="[5, 10, 25, 50]"
+    (page)="cambiarPagina($event)"
+    aria-label="Paginación de clientes"
+  />
 </section>

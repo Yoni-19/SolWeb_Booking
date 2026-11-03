@@ -2,7 +2,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { API_BASE } from '../../core/api.constants';
-import { Reserva, ReservaAlta } from '../../core/models/reserva.model';
+import { Pagina } from '../../core/models/pagina.model';
+import { EstadoReserva, Reserva, ReservaAlta } from '../../core/models/reserva.model';
 
 /**
  * Real HTTP service — talks to the Spring Boot backend.
@@ -13,8 +14,16 @@ export class ReservaService {
   private readonly http = inject(HttpClient);
   private readonly url = `${API_BASE}/api/reservas`;
 
-  list(): Observable<Reserva[]> {
-    return this.http.get<Reserva[]>(this.url);
+  /**
+   * GET /api/reservas?page=&size=&estado= — server-side pagination.
+   * A CLIENTE only receives their own rows; the backend applies that filter.
+   */
+  list(page = 0, size = 10, estado?: EstadoReserva): Observable<Pagina<Reserva>> {
+    const params: Record<string, string | number> = { page, size, sort: 'id,desc' };
+    if (estado) {
+      params['estado'] = estado;
+    }
+    return this.http.get<Pagina<Reserva>>(this.url, { params });
   }
 
   get(id: number): Observable<Reserva | undefined> {
