@@ -13,10 +13,6 @@ export function roleGuard(...roles: Rol[]): CanActivateFn {
     const auth = inject(AuthService);
     const router = inject(Router);
 
-    if (!auth.isAuthenticated) {
-      return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
-    }
-
     return auth.asegurarSesion().pipe(
       map((sesion) => (roles.includes(sesion.rol) ? true : router.createUrlTree(['/dashboard']))),
       catchError(() => {

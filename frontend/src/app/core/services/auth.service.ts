@@ -5,9 +5,6 @@ import { Observable, of, switchMap, tap } from 'rxjs';
 import { API_BASE } from '../api.constants';
 import { UsuarioSesion } from '../models/cliente.model';
 
-const TOKEN_KEY = 'auth_token';
-const CORREO_KEY = 'auth_correo';
-
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -16,6 +13,7 @@ export class AuthService {
   private readonly sesionState = signal<UsuarioSesion | null>(null);
   /** Current session, including the role. Null until it is loaded from the API. */
   readonly sesion = this.sesionState.asReadonly();
+  readonly correo = computed(() => this.sesionState()?.correo ?? null);
 
   readonly esAdmin = computed(() => this.sesionState()?.rol === 'ADMIN');
   readonly esStaff = computed(() => {
@@ -24,18 +22,17 @@ export class AuthService {
   });
   readonly esCliente = computed(() => this.sesionState()?.rol === 'CLIENTE');
 
-  /** POST /api/auth/login: stores the JWT and then loads the session (role included). */
+  /**
+   * POST /api/auth/login: the backend stores the JWT in an httpOnly cookie,
+   * so the browser never exposes it to JavaScript. Then loads the session.
+   */
   login(correo: string, clave: string): Observable<UsuarioSesion> {
-    return this.http.post<{ token: string }>(`${API_BASE}/api/auth/login`, { correo, clave }).pipe(
-      tap((res) => {
-        localStorage.setItem(TOKEN_KEY, res.token);
-        localStorage.setItem(CORREO_KEY, correo);
-      }),
+    return this.http.post<void>(`${API_BASE}/api/auth/login`, { correo, clave }).pipe(
       switchMap(() => this.cargarSesion()),
     );
   }
 
-  /** GET /api/auth/me: the role always comes from the backend, never from localStorage. */
+  /** GET /api/auth/me: the role always comes from the backend, never from the client. */
   cargarSesion(): Observable<UsuarioSesion> {
     return this.http.get<UsuarioSesion>(`${API_BASE}/api/auth/me`).pipe(
       tap((sesion) => this.sesionState.set(sesion)),
@@ -48,27 +45,21 @@ export class AuthService {
     return actual ? of(actual) : this.cargarSesion();
   }
 
+  /** POST /api/auth/logout: the backend expires the cookie, then the local state is cleared. */
   logout(): void {
-    this.limpiar();
-    this.router.navigate(['/login']);
+    this.http.post<void>(`${API_BASE}/api/auth/logout`, {}).subscribe({
+      next: () => this.finalizar(),
+      error: () => this.finalizar(),
+    });
   }
 
-  /** Clears credentials without navigating (used by guards when the token is stale). */
+  /** Clears the local session without calling the API (used by guards and the 401 interceptor). */
   limpiar(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(CORREO_KEY);
     this.sesionState.set(null);
   }
 
-  get token(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
-  }
-
-  get correo(): string | null {
-    return localStorage.getItem(CORREO_KEY);
-  }
-
-  get isAuthenticated(): boolean {
-    return !!this.token;
+  private finalizar(): void {
+    this.limpiar();
+    this.router.navigate(['/login']);
   }
 }

@@ -34,10 +34,4 @@ export class LayoutComponent {
     return rol ? ROL_LABEL[rol] : '';
   });
 
-  constructor() {
-    // El rol no viaja en el token: se pide a /api/auth/me al entrar al layout.
-    if (this.auth.isAuthenticated) {
-      this.auth.asegurarSesion().subscribe({ error: () => this.auth.logout() });
-    }
-  }
 }

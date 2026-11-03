@@ -1,5 +1,6 @@
 package com.proyectosw.sreservas.config;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -15,6 +16,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.servlet.http.Cookie;
 
 // Spring Boot 4 usa Jackson 3: el ObjectMapper autoconfigurado vive en tools.jackson.
 import tools.jackson.databind.ObjectMapper;
@@ -23,9 +27,16 @@ import tools.jackson.databind.ObjectMapper;
  * Verifica la matriz de permisos de SecurityConfig contra la API real.
  * Usa los usuarios del seed: admin@email.com (ADMIN) y laura@email.com (CLIENTE).
  * Requiere MySQL arriba, igual que el resto de los tests del proyecto.
+ *
+ * <p>La sesion viaja en la cookie httpOnly que setea el login, igual que en el
+ * navegador. {@code @Transactional} hace rollback de todo lo que escribe cada test:
+ * el usuario temporal de {@code elRecepcionista...} no queda en la base aunque la
+ * corrida se corte. El DELETE del {@code finally} se conserva y exige 204, asi un
+ * fallo de limpieza rompe el test en vez de ensuciar la base.</p>
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class SeguridadPorRolTests {
 
     private static final String CLAVE_SEED = "test123";
@@ -51,16 +62,16 @@ class SeguridadPorRolTests {
 
     @Test
     void elClienteConsultaCanchasYReservasPeroNoUsuariosNiReservasAjenas() throws Exception {
-        String token = tokenDe("laura@email.com", CLAVE_SEED);
+        Cookie sesion = cookieDe("laura@email.com", CLAVE_SEED);
 
-        mockMvc.perform(get("/api/canchas").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/canchas").cookie(sesion))
                 .andExpect(status().isOk());
-        mockMvc.perform(get("/api/reservas").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/reservas").cookie(sesion))
                 .andExpect(status().isOk());
-        mockMvc.perform(get("/api/usuarios").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/usuarios").cookie(sesion))
                 .andExpect(status().isForbidden());
         // La reserva 2 del seed pertenece a otro usuario: reprogramarla da 403, no 400 ni 200.
-        mockMvc.perform(put("/api/reservas/2").header("Authorization", "Bearer " + token)
+        mockMvc.perform(put("/api/reservas/2").cookie(sesion)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"fechaHoraInicio":"2026-11-03T09:00:00","fechaHoraFin":"2026-11-03T10:30:00","canchaId":1}
@@ -70,9 +81,9 @@ class SeguridadPorRolTests {
 
     @Test
     void elPerfilPropioDevuelveElRolDeLaBase() throws Exception {
-        String token = tokenDe("laura@email.com", CLAVE_SEED);
+        Cookie sesion = cookieDe("laura@email.com", CLAVE_SEED);
 
-        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/auth/me").cookie(sesion))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.correo").value("laura@email.com"))
                 .andExpect(jsonPath("$.rol").value("CLIENTE"));
@@ -80,15 +91,15 @@ class SeguridadPorRolTests {
 
     @Test
     void elAdminGestionaUsuariosYRoles() throws Exception {
-        String token = tokenDe("admin@email.com", CLAVE_SEED);
+        Cookie sesion = cookieDe("admin@email.com", CLAVE_SEED);
 
-        mockMvc.perform(get("/api/usuarios").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/usuarios").cookie(sesion))
                 .andExpect(status().isOk());
     }
 
     @Test
     void elRecepcionistaLeeUsuariosPeroNoCambiaRolesNiGestionaCanchas() throws Exception {
-        String admin = tokenDe("admin@email.com", CLAVE_SEED);
+        Cookie admin = cookieDe("admin@email.com", CLAVE_SEED);
         String correo = "prueba.recepcionista." + UUID.randomUUID() + "@test.local";
 
         String alta = mockMvc.perform(post("/api/usuarios")
@@ -102,37 +113,39 @@ class SeguridadPorRolTests {
 
         try {
             mockMvc.perform(put("/api/usuarios/" + id + "/rol")
-                            .header("Authorization", "Bearer " + admin)
+                            .cookie(admin)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"rol\":\"RECEPCIONISTA\"}"))
                     .andExpect(status().isOk());
 
-            String recepcionista = tokenDe(correo, CLAVE_SEED);
+            Cookie recepcionista = cookieDe(correo, CLAVE_SEED);
 
-            mockMvc.perform(get("/api/usuarios").header("Authorization", "Bearer " + recepcionista))
+            mockMvc.perform(get("/api/usuarios").cookie(recepcionista))
                     .andExpect(status().isOk());
             mockMvc.perform(put("/api/usuarios/" + id + "/rol")
-                            .header("Authorization", "Bearer " + recepcionista)
+                            .cookie(recepcionista)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"rol\":\"CLIENTE\"}"))
                     .andExpect(status().isForbidden());
             mockMvc.perform(post("/api/canchas")
-                            .header("Authorization", "Bearer " + recepcionista)
+                            .cookie(recepcionista)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{}"))
                     .andExpect(status().isForbidden());
         } finally {
-            mockMvc.perform(delete("/api/usuarios/" + id).header("Authorization", "Bearer " + admin));
+            mockMvc.perform(delete("/api/usuarios/" + id).cookie(admin))
+                    .andExpect(status().isNoContent());
         }
     }
 
-    /** Hace login real y devuelve el JWT; asi se prueba tambien que el rol sale de la base. */
-    private String tokenDe(String correo, String clave) throws Exception {
-        String respuesta = mockMvc.perform(post("/api/auth/login")
+    /** Hace login real y devuelve la cookie de sesion; asi se prueba tambien que el rol sale de la base. */
+    private Cookie cookieDe(String correo, String clave) throws Exception {
+        Cookie cookie = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"correo\":\"%s\",\"clave\":\"%s\"}".formatted(correo, clave)))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-        return mapper.readTree(respuesta).get("token").asText();
+                .andExpect(status().isNoContent())
+                .andReturn().getResponse().getCookie(AuthCookies.NOMBRE);
+        assertThat(cookie).as("el login debe setear la cookie %s", AuthCookies.NOMBRE).isNotNull();
+        return cookie;
     }
 }

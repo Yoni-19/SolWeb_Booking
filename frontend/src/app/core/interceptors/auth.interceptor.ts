@@ -1,12 +1,9 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 
-const TOKEN_KEY = 'auth_token';
-
-/** Attaches the stored JWT as `Authorization: Bearer <token>` on every request. */
-export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (token) {
-    req = req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
-  }
-  return next(req);
-};
+/**
+ * El JWT vive en una cookie httpOnly: JavaScript no lo ve ni lo adjunta a mano.
+ * `withCredentials` hace que el navegador mande y reciba esa cookie en cada request
+ * cross-origin contra la API (frontend :4200, backend :8080).
+ */
+export const authInterceptor: HttpInterceptorFn = (req, next) =>
+  next(req.clone({ withCredentials: true }));

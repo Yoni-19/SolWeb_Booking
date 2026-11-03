@@ -26,7 +26,7 @@
         } @else {
           <mat-form-field appearance="outline">
             <mat-label>Cliente</mat-label>
-            <input matInput [value]="auth.sesion()?.nombres ?? auth.correo ?? ''" readonly />
+            <input matInput [value]="auth.sesion()?.nombres ?? auth.correo() ?? ''" readonly />
             <mat-hint>La reserva se registra a tu nombre</mat-hint>
           </mat-form-field>
         }

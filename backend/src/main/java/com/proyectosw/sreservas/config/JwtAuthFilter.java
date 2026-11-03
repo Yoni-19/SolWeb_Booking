@@ -21,6 +21,7 @@ import com.proyectosw.sreservas.service.JwtService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -46,13 +47,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             FilterChain filterChain) throws ServletException, IOException {
 
         try {
-            final String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith(tokenPrefix)) {
+            final String jwt = extraerToken(request);
+            if (jwt == null) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            final String jwt = authHeader.substring(tokenPrefix.length());
             final String userEmail = jwtService.extractCorreo(jwt);
 
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -68,6 +68,27 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             writeUnauthorized(response);
         }
+    }
+
+    /**
+     * Prioriza la cookie httpOnly (el camino del navegador) y deja el header
+     * {@code Authorization: Bearer} como alternativa para Swagger y Postman.
+     */
+    private String extraerToken(HttpServletRequest request) {
+        final Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (AuthCookies.NOMBRE.equals(cookie.getName()) && !cookie.getValue().isBlank()) {
+                    return cookie.getValue();
+                }
+            }
+        }
+
+        final String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith(tokenPrefix)) {
+            return authHeader.substring(tokenPrefix.length()).trim();
+        }
+        return null;
     }
 
     private void writeUnauthorized(HttpServletResponse response) throws IOException {

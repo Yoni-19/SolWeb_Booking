@@ -44,7 +44,7 @@
       @if (rolLabel()) {
         <mat-chip class="toolbar-rol">{{ rolLabel() }}</mat-chip>
       }
-      <span class="toolbar-user">{{ auth.correo }}</span>
+      <span class="toolbar-user">{{ auth.correo() }}</span>
       <button mat-icon-button (click)="auth.logout()" aria-label="Cerrar sesión" title="Cerrar sesión">
         <mat-icon>logout</mat-icon>
       </button>

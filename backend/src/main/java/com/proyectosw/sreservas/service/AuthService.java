@@ -7,7 +7,6 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.proyectosw.sreservas.dto.AuthResponse;
 import com.proyectosw.sreservas.dto.LoginRequest;
 
 @Service
@@ -21,14 +20,14 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
-    public AuthResponse login(LoginRequest request) {
+    /** Valida las credenciales y devuelve el JWT que el controller guarda en la cookie. */
+    public String login(LoginRequest request) {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.correo(), request.clave()));
         } catch (AuthenticationException ex) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Correo o clave incorrectos");
         }
-        String token = jwtService.generateToken(request.correo());
-        return new AuthResponse(token);
+        return jwtService.generateToken(request.correo());
     }
 }
