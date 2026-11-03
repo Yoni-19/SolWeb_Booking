@@ -1,6 +1,7 @@
 # sreservas — Backend
 
-API REST del Sistema de Reservas de un complejo deportivo. Spring Boot sobre MySQL, con JWT.
+API REST del Sistema de Reservas de un complejo deportivo. Spring Boot sobre MySQL, con JWT
+transportado en una cookie `httpOnly`.
 
 ## Stack
 
@@ -52,29 +53,99 @@ Las tres cuentas del seed usan la clave `test123` y sus roles salen de `data.sql
 | `pedro@email.com` | `CLIENTE` — Pedro Diaz |
 
 ```powershell
-curl -X POST http://localhost:8080/api/auth/login `
+# El login responde 204 y deja el JWT en la cookie access_token.
+curl -i -c cookies.txt -X POST http://localhost:8080/api/auth/login `
   -H "Content-Type: application/json" `
   -d '{"correo":"admin@email.com","clave":"test123"}'
+
+# Reusa la cookie guardada
+curl -b cookies.txt http://localhost:8080/api/auth/me
 ```
 
 ## Endpoints
 
-Todos salvo `POST /api/auth/login` y `POST /api/usuarios` (registro) exigen
-`Authorization: Bearer <token>`.
+Todos salvo `POST /api/auth/login`, `POST /api/auth/logout` y `POST /api/usuarios` (registro)
+exigen la cookie `access_token`. El header `Authorization: Bearer <token>` sigue aceptándose
+como alternativa para Postman y scripts.
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| POST | `/api/auth/login` | Devuelve `{ token }` |
+| POST | `/api/auth/login` | Valida credenciales y setea la cookie (204) |
+| POST | `/api/auth/logout` | Borra la cookie (204) |
 | GET | `/api/auth/me` | Usuario autenticado con su `rol` |
-| GET/POST | `/api/usuarios` | Listar / registrar usuario (el alta nace `CLIENTE`) |
+| GET/POST | `/api/usuarios` | Listar (paginado) / registrar usuario (el alta nace `CLIENTE`) |
 | GET/PUT/DELETE | `/api/usuarios/{id}` | Detalle / actualizar (PUT no exige clave) / eliminar |
 | PUT | `/api/usuarios/{id}/rol` | Cambiar el rol (solo `ADMIN`) |
 | GET/POST | `/api/canchas` | Listar / crear cancha |
 | GET/PUT/DELETE | `/api/canchas/{id}` | Detalle / actualizar / eliminar |
-| GET/POST | `/api/reservas` | Listar / crear reserva |
+| GET/POST | `/api/reservas` | Listar (paginado) / crear reserva |
 | GET/PUT/DELETE | `/api/reservas/{id}` | Detalle / actualizar / eliminar |
 | GET/POST | `/api/pagos` | Listar / crear pago |
 | GET/PUT/DELETE | `/api/pagos/{id}` | Detalle / actualizar / eliminar |
+
+## Documentación OpenAPI (Swagger)
+
+`springdoc-openapi` escanea los controllers en runtime y publica el contrato:
+
+- `http://localhost:8080/swagger-ui.html` — UI interactiva para probar los endpoints.
+- `http://localhost:8080/v3/api-docs` — contrato OpenAPI en JSON.
+
+Las dos rutas son públicas (`SecurityConfig`). Como Swagger corre en el mismo host que la API,
+alcanza con ejecutar `POST /api/auth/login` desde la UI: el navegador guarda la cookie y los
+endpoints protegidos la envían solos. El botón **Authorize** con `bearerAuth` queda para probar
+con un token pegado a mano.
+
+La dependencia es la línea **3.x** de springdoc: la 2.x no arranca en Spring Boot 4.
+
+## Autenticación por cookie `httpOnly`
+
+`POST /api/auth/login` responde `204` y setea:
+
+```
+Set-Cookie: access_token=<jwt>; Path=/api; Max-Age=604800; HttpOnly; SameSite=Strict
+```
+
+| Atributo | Por qué |
+|---|---|
+| `HttpOnly` | JavaScript no puede leer el token: un XSS no se lo lleva |
+| `SameSite=Strict` | El navegador no la adjunta a requests iniciados desde otro sitio (mitiga CSRF) |
+| `Path=/api` | Solo viaja a la API, no a Swagger ni a otros recursos |
+| `Secure` | Se activa con `COOKIE_SECURE=true` sobre HTTPS; en `http://localhost` va apagado |
+
+Consecuencias de diseño:
+
+- **No hay token en el cuerpo de la respuesta.** El frontend no guarda nada: la sesión se
+  reconstruye con `GET /api/auth/me`, que es de donde sale el rol.
+- **El logout borra la cookie, no el JWT.** El backend es stateless: el token sigue siendo
+  válido hasta que expira (7 días). Invalidarlo del lado del servidor exigiría una lista negra
+  o refresh tokens rotativos.
+- **CSRF.** `SameSite=Strict` más una API que solo acepta JSON bloquea el CSRF clásico por
+  formularios. Si el frontend y la API quedaran en sitios distintos, habría que pasar a
+  `SameSite=None; Secure` y agregar un token CSRF.
+- **Mismo host en desarrollo.** Usá `localhost` para el frontend y la API, o `127.0.0.1` para
+  ambos. Mezclarlos (`localhost:4200` → `127.0.0.1:8080`) hace que el navegador los trate como
+  sitios distintos y no mande la cookie.
+- **CORS con credenciales.** `SecurityConfig` habilita `allowCredentials(true)` para
+  `http://localhost:4200` y `http://127.0.0.1:4200`; con `*` el navegador rechazaría la cookie.
+
+## Paginación
+
+`GET /api/usuarios` y `GET /api/reservas` devuelven una página, no un array:
+
+| Query param | Default | Descripción |
+|---|---|---|
+| `page` | `0` | Número de página (base 0) |
+| `size` | `10` | Filas por página |
+| `sort` | `id,desc` | Campo y dirección (`campo,asc` o `campo,desc`) |
+| `estado` | — | Solo en reservas: `PENDIENTE`, `CONFIRMADA`, `CANCELADA`, `COMPLETADA` |
+
+La forma la fija `config/WebConfig` con `pageSerializationMode = VIA_DTO`:
+
+```json
+{ "content": [ ... ], "page": { "size": 10, "number": 0, "totalElements": 137, "totalPages": 14 } }
+```
+
+`canchas` y `pagos` siguen devolviendo arrays: son catálogos chicos y no se paginan.
 
 ## Roles y permisos
 

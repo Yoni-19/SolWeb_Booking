@@ -50,8 +50,9 @@ propio sigue existiendo y sigue funcionando.
 
 ## Reglas de negocio (resumen)
 
-- Roles: `ADMIN` ⊃ `RECEPCIONISTA` ⊃ `CLIENTE`. El JWT solo lleva el correo; el rol se lee de
-  la base en cada request y el frontend lo obtiene de `GET /api/auth/me`.
+- Roles: `ADMIN` ⊃ `RECEPCIONISTA` ⊃ `CLIENTE`. El JWT solo lleva el correo, viaja en una cookie
+  `HttpOnly` + `SameSite=Strict` (el frontend no guarda el token) y el rol se lee de la base en
+  cada request; el frontend lo obtiene de `GET /api/auth/me`.
 - El registro público (`POST /api/usuarios`) crea siempre un `CLIENTE`.
 - Un `CLIENTE` solo ve, reprograma y cancela **sus** reservas (reserva ajena → `403`).
 - Solapamiento de reservas → `409`.

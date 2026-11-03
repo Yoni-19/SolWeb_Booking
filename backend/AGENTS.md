@@ -78,6 +78,12 @@ los dos procesos se pelean por `target/`. Si `clean` falla por archivos bloquead
 - El JWT **solo lleva el correo**. `JwtAuthFilter` resuelve el usuario desde la base en cada
   request (`CurrentUserService`), así que los tokens viejos siguen válidos y un cambio de rol
   aplica al instante. No agregar `rol` al token: obligaría a re-loguear a todos.
+- El JWT viaja en la cookie **`access_token`** (`HttpOnly`, `SameSite=Strict`, `Path=/api`) que
+  setea `POST /api/auth/login` y borra `POST /api/auth/logout`. `AuthCookies` centraliza los
+  atributos; `COOKIE_SECURE=true` en producción. El filtro prioriza la cookie y acepta
+  `Authorization: Bearer` como alternativa (Swagger/Postman). El frontend **no** guarda el token.
+- No hay invalidación server-side del JWT: el logout solo borra la cookie y el token sigue
+  válido hasta expirar. Si se pide revocación real, hace falta lista negra o refresh rotativo.
 - `POST /api/usuarios` es público y **fuerza `CLIENTE`** en `UsuarioService.crear`: nunca confiar
   en un rol que venga del cliente.
 - `PUT /api/usuarios/{id}/rol` (`UsuarioRolRequest`) es el único camino para cambiar roles y
