@@ -1,8 +1,9 @@
 package com.proyectosw.sreservas.service;
 
-import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -28,8 +29,8 @@ public class UsuarioService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public List<Usuario> listarTodos() {
-        return repository.findAll();
+    public Page<Usuario> listarTodos(Pageable pageable) {
+        return repository.findAll(pageable);
     }
 
     public Optional<Usuario> buscarPorId(Integer id) {

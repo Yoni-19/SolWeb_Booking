@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,6 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -48,21 +53,35 @@ class ReservaServiceTests {
     @Test
     void elClienteSoloListaSusPropiasReservas() {
         when(currentUser.get()).thenReturn(usuario(2, Rol.CLIENTE));
-        when(repository.findByUsuario_Id(2)).thenReturn(List.of(reservaDe(2)));
+        when(repository.findByUsuario_Id(eq(2), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(reservaDe(2))));
 
-        List<Reserva> reservas = service.listarTodos();
+        Page<Reserva> reservas = service.listarTodos(PageRequest.of(0, 10), null);
 
-        assertThat(reservas).hasSize(1);
-        verify(repository, never()).findAll();
+        assertThat(reservas.getContent()).hasSize(1);
+        verify(repository, never()).findAll(any(Pageable.class));
     }
 
     @Test
     void elRecepcionistaListaTodasLasReservas() {
         when(currentUser.get()).thenReturn(usuario(9, Rol.RECEPCIONISTA));
-        when(repository.findAll()).thenReturn(List.of(reservaDe(2), reservaDe(3)));
+        when(repository.findAll(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(reservaDe(2), reservaDe(3))));
 
-        assertThat(service.listarTodos()).hasSize(2);
-        verify(repository, never()).findByUsuario_Id(anyInt());
+        assertThat(service.listarTodos(PageRequest.of(0, 10), null).getContent()).hasSize(2);
+        verify(repository, never()).findByUsuario_Id(anyInt(), any(Pageable.class));
+    }
+
+    @Test
+    void elFiltroPorEstadoSeResuelveEnLaConsulta() {
+        when(currentUser.get()).thenReturn(usuario(9, Rol.ADMIN));
+        when(repository.findByEstadoReserva(eq(EstadoReserva.PENDIENTE), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(reservaDe(2))));
+
+        Page<Reserva> pagina = service.listarTodos(PageRequest.of(0, 10), EstadoReserva.PENDIENTE);
+
+        assertThat(pagina.getTotalElements()).isEqualTo(1);
+        verify(repository, never()).findAll(any(Pageable.class));
     }
 
     @Test

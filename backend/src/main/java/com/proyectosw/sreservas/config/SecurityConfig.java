@@ -59,7 +59,12 @@ public class SecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()          // preflight CORS
+                // Swagger UI y el contrato OpenAPI son documentacion publica: si quedan
+                // detras de authenticated(), la pagina responde 401 y no se puede usar.
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/api/auth/login").permitAll()
+                // El logout tiene que poder borrar una cookie vencida: no exige sesion valida.
+                .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()   // registro público (ACTIVO)
                 // .requestMatchers(HttpMethod.POST, "/api/usuarios").authenticated() // variante: exigir token (descomentar para cambiar)

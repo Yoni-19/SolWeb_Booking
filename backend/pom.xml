@@ -92,6 +92,14 @@
 			<version>0.12.6</version>
 			<scope>runtime</scope>
 		</dependency>
+
+		<!-- Swagger UI + contrato OpenAPI generado en runtime. La linea 3.x es la
+		     unica compatible con Spring Boot 4: la 2.x falla al arrancar. -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>3.1.1</version>
+		</dependency>
 	</dependencies>
 
 	<build>

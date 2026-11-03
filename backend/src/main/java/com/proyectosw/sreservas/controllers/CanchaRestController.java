@@ -17,10 +17,13 @@ import com.proyectosw.sreservas.dto.CanchaRequest;
 import com.proyectosw.sreservas.dto.CanchaResponse;
 import com.proyectosw.sreservas.service.CanchaService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping ("/api/canchas")
+@Tag(name = "Canchas", description = "Alta, edicion y baja de canchas")
 public class CanchaRestController {
     private final CanchaService service;
 
@@ -29,6 +32,7 @@ public class CanchaRestController {
     }
 
     @GetMapping
+    @Operation(summary = "Lista todas las canchas")
     public ResponseEntity<List<CanchaResponse>> listarTodos() {
         List<CanchaResponse> canchas = service.listarTodos().stream()
                 .map(CanchaResponse::toResponse)

@@ -17,10 +17,13 @@ import com.proyectosw.sreservas.dto.PagoRequest;
 import com.proyectosw.sreservas.dto.PagoResponse;
 import com.proyectosw.sreservas.service.PagoService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping ("/api/pagos")
+@Tag(name = "Pagos", description = "Registro y consulta de pagos de reservas")
 public class PagoRestController {
     private final PagoService service;
 
@@ -29,6 +32,7 @@ public class PagoRestController {
     }
 
     @GetMapping
+    @Operation(summary = "Lista todos los pagos")
     public ResponseEntity<List<PagoResponse>> listarTodos() {
         List<PagoResponse> pagos = service.listarTodos().stream()
                 .map(PagoResponse::toResponse)

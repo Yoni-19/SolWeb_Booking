@@ -7,6 +7,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -40,13 +42,21 @@ public class ReservaService {
         this.currentUser = currentUser;
     }
 
-    /** ADMIN y RECEPCIONISTA ven todas las reservas; CLIENTE solo las propias. */
-    public List<Reserva> listarTodos(){
+    /**
+     * ADMIN y RECEPCIONISTA ven todas las reservas; CLIENTE solo las propias.
+     * El filtro por estado es opcional y se resuelve en la consulta, no en memoria,
+     * para que la paginacion sea correcta (totalElements cuenta solo lo filtrado).
+     */
+    public Page<Reserva> listarTodos(Pageable pageable, EstadoReserva estado) {
         Usuario actual = currentUser.get();
         if (Rol.CLIENTE.equals(actual.getRol())) {
-            return repository.findByUsuario_Id(actual.getId());
+            return estado == null
+                    ? repository.findByUsuario_Id(actual.getId(), pageable)
+                    : repository.findByUsuario_IdAndEstadoReserva(actual.getId(), estado, pageable);
         }
-        return repository.findAll();
+        return estado == null
+                ? repository.findAll(pageable)
+                : repository.findByEstadoReserva(estado, pageable);
     }
 
     public Optional<Reserva> buscarPorId(Integer id) {

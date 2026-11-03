@@ -2,8 +2,9 @@ package com.proyectosw.sreservas.repository;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -39,5 +40,11 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer>{
     boolean existsByCancha_Id(Integer canchaId);
 
     /** Reservations of a single user: the client only sees their own. */
-    List<Reserva> findByUsuario_Id(Integer usuarioId);
+    Page<Reserva> findByUsuario_Id(Integer usuarioId, Pageable pageable);
+
+    /** Same as above, narrowed to one state (used by the dashboard counters). */
+    Page<Reserva> findByUsuario_IdAndEstadoReserva(Integer usuarioId, EstadoReserva estadoReserva, Pageable pageable);
+
+    /** All reservations in one state (staff only). */
+    Page<Reserva> findByEstadoReserva(EstadoReserva estadoReserva, Pageable pageable);
 }
