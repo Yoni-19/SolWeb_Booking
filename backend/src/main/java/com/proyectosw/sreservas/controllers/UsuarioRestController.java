@@ -13,13 +13,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.proyectosw.sreservas.dto.UsuarioPersonalRequest;
 import com.proyectosw.sreservas.dto.UsuarioRequest;
 import com.proyectosw.sreservas.dto.UsuarioResponse;
 import com.proyectosw.sreservas.dto.UsuarioRolRequest;
 import com.proyectosw.sreservas.dto.UsuarioUpdateRequest;
+import com.proyectosw.sreservas.model.Usuario;
+import com.proyectosw.sreservas.model.enums.Rol;
+import com.proyectosw.sreservas.service.CurrentUserService;
 import com.proyectosw.sreservas.service.UsuarioService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,25 +37,34 @@ import jakarta.validation.Valid;
 @Tag(name = "Usuarios", description = "Gestion de usuarios y roles")
 public class UsuarioRestController {
     private final UsuarioService service;
+    private final CurrentUserService currentUser;
 
-    public UsuarioRestController(final UsuarioService service) {
+    public UsuarioRestController(final UsuarioService service, final CurrentUserService currentUser) {
         this.service = service;
+        this.currentUser = currentUser;
     }
 
     @GetMapping
     @Operation(summary = "Lista los usuarios paginados",
-            description = "Query params: page (base 0), size y sort.")
+            description = "Un ADMIN ve clientes y trabajadores (sin su propio usuario) y puede filtrar con "
+                    + "el query param rol o pedir solo personal con personal=true; un RECEPCIONISTA solo "
+                    + "recibe CLIENTES. Otros params: page (base 0), size y sort.")
     public ResponseEntity<Page<UsuarioResponse>> listarTodos(
+            @RequestParam(name = "rol", required = false) Rol rol,
+            @RequestParam(name = "personal", required = false) Boolean personal,
             @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<UsuarioResponse> pagina = service.listarTodos(pageable)
+        Usuario actual = currentUser.get();
+        Rol rolActual = actual.getRol() != null ? actual.getRol() : Rol.CLIENTE;
+        Page<UsuarioResponse> pagina = service.listar(pageable, rol, personal, rolActual, actual.getId())
                 .map(UsuarioResponse::toResponse);
         return ResponseEntity.ok(pagina);
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Busca un usuario por id")
+    @Operation(summary = "Busca un usuario por id",
+            description = "Un RECEPCIONISTA solo puede consultar usuarios con rol CLIENTE.")
     public ResponseEntity<UsuarioResponse> buscarPorId(@PathVariable Integer id) {
-        return service.buscarPorId(id)
+        return service.buscarPorId(id, currentUser.rol())
                 .map(UsuarioResponse::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No existe el usuario con id " + id));
@@ -62,6 +76,15 @@ public class UsuarioRestController {
     @SecurityRequirements
     public ResponseEntity<UsuarioResponse> crear(@Valid @RequestBody UsuarioRequest request) {
         UsuarioResponse nuevo = UsuarioResponse.toResponse(service.crear(request.toEntity()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);
+    }
+
+    @PostMapping("/personal")
+    @Operation(summary = "Alta de personal (solo ADMIN)",
+            description = "Crea un trabajador con un rol de personal (nunca CLIENTE).")
+    public ResponseEntity<UsuarioResponse> crearPersonal(@Valid @RequestBody UsuarioPersonalRequest request) {
+        UsuarioResponse nuevo = UsuarioResponse.toResponse(
+                service.crearPersonal(request.toEntity(), request.rol()));
         return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);
     }
 
