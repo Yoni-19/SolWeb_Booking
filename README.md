@@ -59,15 +59,19 @@ Las cuentas del seed usan la clave `test123`:
 | `admin@email.com` | `ADMIN` | Admin Sistema |
 | `laura@email.com` | `CLIENTE` | Laura Gomez |
 | `pedro@email.com` | `CLIENTE` | Pedro Diaz |
+| `recepcion@email.com` | `RECEPCIONISTA` | Rocio Recepcion |
+| `entrenador@email.com` | `ENTRENADOR` | Ezequiel Entrenador (rol informativo, sin login) |
 
-Cualquiera puede registrarse desde `/registro`: el alta siempre nace como `CLIENTE` y un
-`ADMIN` puede ascenderla desde la pantalla de clientes.
+Cualquiera puede registrarse desde `/registro`: el alta siempre nace como `CLIENTE`. El `ADMIN`
+crea a los trabajadores desde **Personal**, donde elige el rol (los roles `ENTRENADOR`,
+`MANTENIMIENTO` y `ARBITRO` son solo informativos y no pueden iniciar sesión).
 
 ## Reglas de negocio
 
-- **Roles**: `ADMIN` ⊃ `RECEPCIONISTA` ⊃ `CLIENTE`. El JWT solo lleva el correo, viaja en una
-  cookie `HttpOnly` + `SameSite=Strict` y el rol se lee de la base en cada request, así que un
-  cambio de rol aplica al instante.
+- **Roles**: `ADMIN` ⊃ `RECEPCIONISTA` ⊃ `CLIENTE` para los roles operativos. `ENTRENADOR`,
+  `MANTENIMIENTO` y `ARBITRO` existen solo como datos de personal y no pueden iniciar sesión.
+  El JWT solo lleva el correo, viaja en una cookie `HttpOnly` + `SameSite=Strict` y el rol se
+  lee de la base en cada request, así que un cambio de rol aplica al instante.
 - **Solapamiento**: `409 Conflict` si una reserva se superpone con otra de la misma cancha.
 - **Monto**: por hora iniciada (`ceil(minutos / 60)`), no por hora exacta.
 - **Contratos**: las respuestas usan DTOs; el hash BCrypt de la clave nunca sale por la API.
@@ -79,5 +83,6 @@ El detalle de los endpoints y de la matriz de permisos está en `backend/README.
 
 Roles implementados en backend y frontend (menú, rutas, dashboard y formularios por rol).
 `GET /api/usuarios` y `GET /api/reservas` están paginados y el frontend los consume con
-`MatPaginator`. La API se documenta sola en `http://localhost:8080/swagger-ui.html`.
-Pendiente: la regla del abono del 50% en el módulo de pagos.
+`MatPaginator`. Los módulos **Clientes** y **Personal** están separados por rol. La API se
+documenta sola en `http://localhost:8080/swagger-ui.html`.
+Pendiente: evidencias de las pruebas funcionales.

@@ -50,10 +50,15 @@ propio sigue existiendo y sigue funcionando.
 
 ## Reglas de negocio (resumen)
 
-- Roles: `ADMIN` ⊃ `RECEPCIONISTA` ⊃ `CLIENTE`. El JWT solo lleva el correo, viaja en una cookie
+- Roles operativos: `ADMIN` ⊃ `RECEPCIONISTA` ⊃ `CLIENTE`. `ENTRENADOR`, `MANTENIMIENTO` y
+  `ARBITRO` son roles informativos de personal: no tienen pantallas ni permisos y el login
+  responde `403`. El JWT solo lleva el correo, viaja en una cookie
   `HttpOnly` + `SameSite=Strict` (el frontend no guarda el token) y el rol se lee de la base en
   cada request; el frontend lo obtiene de `GET /api/auth/me`.
 - El registro público (`POST /api/usuarios`) crea siempre un `CLIENTE`.
+- El alta de personal va por `POST /api/usuarios/personal` (solo `ADMIN`, con `rol` obligatorio)
+  y el listado por `GET /api/usuarios?personal=true`. La UI separa **Clientes** (solo `CLIENTE`)
+  de **Personal** (todo lo demás).
 - Un `CLIENTE` solo ve, reprograma y cancela **sus** reservas (reserva ajena → `403`).
 - Solapamiento de reservas → `409`.
 - Monto por hora iniciada: `horas = (minutos + 59) / 60`.

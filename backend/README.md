@@ -44,13 +44,15 @@ La base se inicializa sola: `spring.jpa.hibernate.ddl-auto=update` crea el esque
 
 ## Credenciales de prueba
 
-Las tres cuentas del seed usan la clave `test123` y sus roles salen de `data.sql`:
+Las cuentas del seed usan la clave `test123` y sus roles salen de `data.sql`:
 
 | Correo | Rol |
 |---|---|
 | `admin@email.com` | `ADMIN` — Admin Sistema |
 | `laura@email.com` | `CLIENTE` — Laura Gomez |
 | `pedro@email.com` | `CLIENTE` — Pedro Diaz |
+| `recepcion@email.com` | `RECEPCIONISTA` — Rocio Recepcion |
+| `entrenador@email.com` | `ENTRENADOR` — Ezequiel Entrenador (rol informativo, no puede iniciar sesión) |
 
 ```powershell
 # El login responde 204 y deja el JWT en la cookie access_token.
@@ -64,8 +66,9 @@ curl -b cookies.txt http://localhost:8080/api/auth/me
 
 ## Endpoints
 
-Todos salvo `POST /api/auth/login`, `POST /api/auth/logout` y `POST /api/usuarios` (registro)
-exigen la cookie `access_token`. El header `Authorization: Bearer <token>` sigue aceptándose
+Todos los endpoints de `/api` salvo `POST /api/auth/login`, `POST /api/auth/logout` y
+`POST /api/usuarios` (registro) exigen la cookie `access_token`. Swagger (`/swagger-ui/**` y
+`/v3/api-docs/**`) es público. El header `Authorization: Bearer <token>` sigue aceptándose
 como alternativa para Postman y scripts.
 
 | Método | Ruta | Descripción |
@@ -73,15 +76,18 @@ como alternativa para Postman y scripts.
 | POST | `/api/auth/login` | Valida credenciales y setea la cookie (204) |
 | POST | `/api/auth/logout` | Borra la cookie (204) |
 | GET | `/api/auth/me` | Usuario autenticado con su `rol` |
-| GET/POST | `/api/usuarios` | Listar (paginado) / registrar usuario (el alta nace `CLIENTE`) |
-| GET/PUT/DELETE | `/api/usuarios/{id}` | Detalle / actualizar (PUT no exige clave) / eliminar |
+| GET/POST | `/api/usuarios` | Listar (paginado, con `?rol=` o `?personal=true`) / registrar cliente (siempre nace `CLIENTE`) |
+| POST | `/api/usuarios/personal` | Alta de personal con rol (solo `ADMIN`, nunca `CLIENTE`) |
+| GET/PUT/DELETE | `/api/usuarios/{id}` | Detalle / actualizar (clave opcional) / eliminar |
 | PUT | `/api/usuarios/{id}/rol` | Cambiar el rol (solo `ADMIN`) |
 | GET/POST | `/api/canchas` | Listar / crear cancha |
 | GET/PUT/DELETE | `/api/canchas/{id}` | Detalle / actualizar / eliminar |
 | GET/POST | `/api/reservas` | Listar (paginado) / crear reserva |
-| GET/PUT/DELETE | `/api/reservas/{id}` | Detalle / actualizar / eliminar |
-| GET/POST | `/api/pagos` | Listar / crear pago |
-| GET/PUT/DELETE | `/api/pagos/{id}` | Detalle / actualizar / eliminar |
+| GET/PUT | `/api/reservas/{id}` | Detalle / reprogramar |
+| PATCH | `/api/reservas/{id}/estado` | Check-in (`CONFIRMADA → EN_CURSO`), check-out (`EN_CURSO → COMPLETADA`) o cancelar |
+| DELETE | `/api/reservas/{id}` | Borrado físico, solo para limpieza por Swagger (la UI no lo usa) |
+| GET/POST | `/api/pagos` | Listar (staff) / registrar seña o saldo |
+| GET/PUT/DELETE | `/api/pagos/{id}` | Detalle / actualizar método / eliminar (solo staff) |
 
 ## Documentación OpenAPI (Swagger)
 
@@ -137,7 +143,7 @@ Consecuencias de diseño:
 | `page` | `0` | Número de página (base 0) |
 | `size` | `10` | Filas por página |
 | `sort` | `id,desc` | Campo y dirección (`campo,asc` o `campo,desc`) |
-| `estado` | — | Solo en reservas: `PENDIENTE`, `CONFIRMADA`, `CANCELADA`, `COMPLETADA` |
+| `estado` | — | Solo en reservas: `PENDIENTE`, `CONFIRMADA`, `EN_CURSO`, `CANCELADA`, `COMPLETADA` |
 
 La forma la fija `config/WebConfig` con `pageSerializationMode = VIA_DTO`:
 
@@ -156,16 +162,29 @@ nunca viaja en el token** y un cambio de rol aplica al instante. El frontend lo 
 | Acción | ADMIN | RECEPCIONISTA | CLIENTE |
 |---|---|---|---|
 | Ver/crear/editar/eliminar canchas | sí | no | no |
-| Ver clientes | sí | sí | no |
-| Crear/editar/eliminar clientes y cambiar roles | sí | no | no |
+| Ver clientes | sí | sí (solo `CLIENTE`) | no |
+| Crear clientes | sí | sí | no (se registra solo) |
+| Ver/crear/editar/eliminar personal y cambiar roles | sí | no | no |
 | Ver todas las reservas | sí | sí | solo las propias |
-| Crear reserva | sí | sí | sí (a su nombre) |
-| Editar/eliminar reserva | sí | sí | solo las propias |
-| Pagos | sí | sí | no (fase 2) |
+| Crear reserva | sí | sí (para cualquier cliente) | sí (a su nombre) |
+| Reprogramar o cancelar reserva | sí | sí | solo las propias y `PENDIENTE`/`CONFIRMADA` |
+| Check-in / check-out | sí | sí | no |
+| Registrar pagos | sí (monto libre) | sí (monto libre) | solo seña 50% o total de sus reservas |
+
+El enum `Rol` también acepta `ENTRENADOR`, `MANTENIMIENTO` y `ARBITRO`: existen solo para
+clasificar al personal, no tienen pantallas ni permisos y el login responde `403`
+("Tu rol no tiene acceso al sistema"). El alta de esos trabajadores va por
+`POST /api/usuarios/personal`; el registro público sigue creando siempre `CLIENTE`.
+
+La interfaz **cancela** reservas con `PATCH /api/reservas/{id}/estado`: el `DELETE` existe solo
+para limpieza por Swagger y no se expone en la UI. Un `CLIENTE` deja de ver sus reservas
+`CANCELADA`; el personal las sigue viendo atenuadas. Además, `GET /api/usuarios` y
+`GET /api/usuarios/{id}` ocultan el propio usuario al `ADMIN` y nunca le muestran staff a un
+`RECEPCIONISTA`.
 
 Un `CLIENTE` puede reprogramar o cancelar **sus** reservas: el `403` por reserva ajena lo aplica
-`ReservaService.verificarPropiedad`. Las reservas `COMPLETADA` no se reprograman ni se cancelan
-(`409`).
+`ReservaService.verificarPropiedad`. Solo se reprograman o cancelan reservas `PENDIENTE` o
+`CONFIRMADA`; `EN_CURSO` y `COMPLETADA` responden `409`.
 
 Un rol sin permiso recibe `403` con el envelope JSON `{ timestamp, status, error, message }`.
 
@@ -178,6 +197,26 @@ Reglas de negocio implementadas:
   la clave nunca sale por la API.
 - **Último administrador**: no se puede quitar el rol al último `ADMIN` (`409`).
 - **CORS**: habilitado para `http://localhost:4200` y `http://127.0.0.1:4200` (frontend Angular).
+- **Ciclo de vida**: la reserva nace `PENDIENTE`; registrar la seña la pasa a `CONFIRMADA`;
+  el check-in del personal la pasa a `EN_CURSO`; el check-out o el pago del saldo estando
+  `EN_CURSO` la completan. Cancelar solo aplica a `PENDIENTE`/`CONFIRMADA`.
+- **Pagos**: hay un solo pago por reserva (relación 1:1 `unique reserva_id`) y el monto se
+  acumula. La primera entrega debe cubrir al menos el 50% (`seniaMinima`); nunca se puede
+  superar el total. `EstadoPago` queda `PARCIAL` o `PAGADO` según lo acumulado.
+- **Check-in/check-out**: iniciar exige un pago registrado (`409` sin seña) y completar exige
+  saldo cero (`409` con saldo pendiente). Si el staff cobra el saldo estando `EN_CURSO`, la
+  reserva se completa sola.
+- **Reprogramación con pago**: se recalcula el total; si lo ya abonado supera el nuevo total
+  devuelve `409`, si no, se actualiza `estadoPago` a `PARCIAL` o `PAGADO`.
+
+### Migración de enums existentes
+
+Hibernate (`ddl-auto=update`) **no** modifica columnas `enum` ya creadas. Si la base es anterior
+a `EN_CURSO`/`PARCIAL`, corré una vez:
+
+```powershell
+& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -uroot -p db_complejoDeportivo < scripts/migrate-estados-pago.sql
+```
 
 ## Gotcha importante: el IDE escribe en `target/classes`
 

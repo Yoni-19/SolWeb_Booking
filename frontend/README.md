@@ -15,8 +15,14 @@ cd frontend
 npm install
 npm start        # dev server en http://localhost:4200
 npm run build    # build de producción -> dist/
-npm test         # tests (Vitest)
 ```
+
+### Tests
+
+El frontend **todavía no tiene runner de tests**: `angular.json` no define el target `test`, no
+hay dependencias de Vitest/Karma y no existe ningún `*.spec.ts`. `npm test` falla con
+`Cannot determine project or target for command`. La verificación por ahora es `npm run build`
+más pruebas manuales contra la API.
 
 ## Estructura
 
@@ -27,12 +33,23 @@ src/app/
 │   ├── guards/              auth.guard (valida la sesión contra /api/auth/me) y role.guard
 │   ├── http/api-error.ts    traduce el envelope de error del backend a un mensaje
 │   ├── interceptors/        withCredentials + redirección central ante 401
-│   ├── models/              tipos de dominio (Cancha, Cliente, Reserva)
+│   ├── models/              tipos de dominio (Cancha, Cliente, Reserva, Pago)
 │   └── services/auth.service.ts
-├── features/      un módulo por dominio: canchas/, clientes/, reservas/, dashboard/, login/
+├── features/      un módulo por dominio: canchas/, clientes/, personal/, reservas/,
+│                  pagos/, dashboard/, login/ y registro/
 ├── shared/        layout (menú lateral) y componentes de UI
 └── app.routes.ts  rutas + guard de autenticación
 ```
+
+No hay una pantalla de **pagos**: el cobro vive dentro de la tabla de reservas. El `CLIENTE`
+paga la seña del 50% o el total con un botón (pago simulado con tarjeta); el personal cobra
+cualquier monto del saldo desde el diálogo "Registrar pago" (`features/pagos/`).
+
+**Clientes** y **Personal** son módulos separados: `clientes/` lista solo usuarios `CLIENTE`
+(admin y recepcionista), mientras que `personal/` es exclusivo del `ADMIN` y lista/crea todo lo
+demás (`ADMIN`, `RECEPCIONISTA`, `ENTRENADOR`, `MANTENIMIENTO`, `ARBITRO`). Los roles que no
+sean `ADMIN`, `RECEPCIONISTA` o `CLIENTE` son solo informativos: no tienen pantallas y el
+backend rechaza su login con `403`.
 
 ## Convenciones
 
@@ -53,9 +70,17 @@ src/app/
   (vacía = no cambiar la actual).
 - `PUT /api/reservas/{id}` ignora el `usuarioId` y nunca acepta `estadoReserva` ni
   `montoTotal`: los calcula el backend.
-- `POST /api/pagos` no acepta `monto`: el servicio lo fuerza al total de la reserva.
-- La solapamiento de horarios devuelve `409`.
+- La interfaz **cancela** reservas con `PATCH /api/reservas/{id}/estado` (baja lógica); no usa
+  `DELETE`. Check-in y check-out son solo para staff, y un `CLIENTE` deja de ver sus canceladas.
+- `POST /api/pagos` exige `monto`, `metodoPago` y `reservaId`. Un `CLIENTE` solo puede pagar la
+  seña del 50% o el total, una vez, sobre su propia reserva; el saldo lo cobra el personal.
+- La reserva nace `PENDIENTE`: hasta que entra la seña no se puede hacer check-in. El staff
+  inicia (`EN_CURSO`), cobra el saldo y finaliza (o la reserva se completa sola al pagar todo).
+- El solapamiento de horarios devuelve `409`.
 - `GET /api/usuarios` y `GET /api/reservas` devuelven `{ content, page: { size, number,
   totalElements, totalPages } }`, no un array. Las tablas usan `MatPaginator` y vuelven a pedir
   la página al backend (`page` es base 0). El `<select>` de clientes del formulario de reservas
   usa `ClienteService.listAll()`, que pide una única página grande porque no es una tabla.
+- El listado de personal usa `GET /api/usuarios?personal=true` y el alta
+  `POST /api/usuarios/personal` con `rol` obligatorio (solo `ADMIN`). El listado de clientes
+  manda `?rol=CLIENTE` y el backend además lo fuerza para el recepcionista.

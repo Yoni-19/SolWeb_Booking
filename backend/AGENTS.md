@@ -73,8 +73,10 @@ los dos procesos se pelean por `target/`. Si `clean` falla por archivos bloquead
 
 ## Roles y seguridad
 
-- Enum `Rol` (`model/enums/Rol.java`): `ADMIN`, `RECEPCIONISTA`, `CLIENTE`. La columna
-  `usuario.rol` es `varchar(20) not null default 'CLIENTE'`.
+- Enum `Rol` (`model/enums/Rol.java`): `ADMIN`, `RECEPCIONISTA`, `CLIENTE`, `ENTRENADOR`,
+  `MANTENIMIENTO`, `ARBITRO`. La columna `usuario.rol` es `varchar(20) not null default 'CLIENTE'`.
+  Los tres últimos son informativos: `Rol.puedeIngresar()` los excluye y `AuthService.login`
+  responde `403` ("Tu rol no tiene acceso al sistema"). No tienen pantallas ni permisos.
 - El JWT **solo lleva el correo**. `JwtAuthFilter` resuelve el usuario desde la base en cada
   request (`CurrentUserService`), así que los tokens viejos siguen válidos y un cambio de rol
   aplica al instante. No agregar `rol` al token: obligaría a re-loguear a todos.
@@ -85,15 +87,33 @@ los dos procesos se pelean por `target/`. Si `clean` falla por archivos bloquead
 - No hay invalidación server-side del JWT: el logout solo borra la cookie y el token sigue
   válido hasta expirar. Si se pide revocación real, hace falta lista negra o refresh rotativo.
 - `POST /api/usuarios` es público y **fuerza `CLIENTE`** en `UsuarioService.crear`: nunca confiar
-  en un rol que venga del cliente.
+  en un rol que venga del cliente. El alta de trabajadores va por
+  `POST /api/usuarios/personal` (solo `ADMIN`), que exige un rol de personal (nunca `CLIENTE`).
 - `PUT /api/usuarios/{id}/rol` (`UsuarioRolRequest`) es el único camino para cambiar roles y
   exige `ADMIN`. Quitar el rol al último `ADMIN` → `409`.
+- `GET /api/usuarios` se filtra en el backend según quién consulta: `RECEPCIONISTA` recibe solo
+  `CLIENTE` (no se ve a sí mismo ni al staff) y ni `?rol=` ni `?personal=true` pueden ampliar esa
+  vista; `ADMIN` ve todos (salvo a sí mismo), puede filtrar con `?rol=` y pedir solo personal con
+  `?personal=true` (todo lo que no es `CLIENTE`). `GET /api/usuarios/{id}` aplica la misma regla.
+  El recepcionista puede crear clientes en `/clientes/nueva`; editar, eliminar, cambiar roles y
+  gestionar personal sigue siendo exclusivo del `ADMIN`.
 - Matriz en `SecurityConfig`; permisos a nivel de fila (reserva ajena) en `ReservaService`.
   Un `403` pasa por `AccessDeniedHandler` (envelope JSON), no por el handler por defecto.
-- `PUT` y `DELETE /api/reservas/**` aceptan a los tres roles, pero `ReservaService.actualizar` y
-  `eliminar` llaman a `verificarPropiedad`: un `CLIENTE` solo toca sus reservas (si no, `403`).
-  Nunca mover esa validación solo a `SecurityConfig`: ahí no se conoce el dueño de la fila.
-- Una reserva `COMPLETADA` no se reprograma ni se cancela (`409`).
+- `PUT`, `DELETE` y `PATCH /api/reservas/**` aceptan a los tres roles, pero
+  `ReservaService.actualizar`, `eliminar` y `cambiarEstado` llaman a `verificarPropiedad`: un
+  `CLIENTE` solo toca sus reservas (si no, `403`). En `cambiarEstado` el `CLIENTE` solo puede
+  pasar a `CANCELADA`; check-in (`CONFIRMADA → EN_CURSO`) y check-out (`EN_CURSO → COMPLETADA`)
+  quedan para el personal. Nunca mover esa validación solo a `SecurityConfig`: ahí no se conoce
+  el dueño de la fila.
+- `POST /api/pagos` acepta a los tres roles: `PagoService` deja que el `CLIENTE` pague solo la
+  seña del 50% o el total de una reserva propia y sin pago previo. `GET/PUT/DELETE /api/pagos/**`
+  es solo `ADMIN`/`RECEPCIONISTA`.
+- La interfaz cancela con `PATCH /api/reservas/{id}/estado` (baja lógica). El `DELETE` sigue
+  existiendo para limpieza vía Swagger y no se expone en la UI.
+- El listado de un `CLIENTE` oculta las reservas `CANCELADA`; el personal las sigue viendo
+  atenuadas.
+- Solo se reprograman o cancelan reservas `PENDIENTE` o `CONFIRMADA`; `EN_CURSO` y `COMPLETADA`
+  responden `409`.
 - Los tests de la matriz están en `config/SeguridadPorRolTests` (login real contra el seed).
 
 ### Trampa: agregar una columna `NOT NULL` a una tabla con filas
@@ -112,6 +132,23 @@ base existente a mano: `UPDATE usuario SET rol = 'ADMIN' WHERE correo = 'admin@e
 - `PUT /api/usuarios/{id}` acepta clave opcional (`UsuarioUpdateRequest`): si viene `null`,
   la clave no cambia.
 - `POST /api/usuarios` exige clave (`UsuarioRequest`); `PUT` también la acepta y la re-codifica.
+- **Ciclo de vida de la reserva**: nace `PENDIENTE`; registrar la seña la confirma
+  (`CONFIRMADA`); el check-in la pasa a `EN_CURSO`; el check-out o cobrar el saldo estando
+  `EN_CURSO` la completan. `CONFIRMADA` no se asigna a mano por `PATCH`.
+- **Pago 1:1**: un solo `Pago` por reserva (`unique reserva_id`), el monto se acumula. La
+  primera entrega debe cubrir `seniaMinima` (50% redondeado a 2 decimales) y nunca se puede
+  superar `montoTotal`. `EstadoPago` queda `PARCIAL` o `PAGADO`.
+- **Check-in/out**: iniciar exige pago registrado (`409` "Registrá la seña antes de iniciar la
+  reserva"); completar exige saldo cero (`409` "Falta cobrar el saldo..."). El pago del saldo
+  en `EN_CURSO` completa la reserva automáticamente.
+- **Reprogramar con pago**: se recalcula el total; si lo abonado supera el nuevo total, `409`;
+  si no, se ajusta `estadoPago` a `PARCIAL`/`PAGADO`.
+
+### Migración de enums existentes
+
+Hibernate con `ddl-auto=update` no altera columnas `enum` ya creadas: agregar un valor nuevo al
+enum de Java no alcanza. Correr una vez `scripts/migrate-estados-pago.sql` en bases viejas
+(`EN_CURSO` en `reserva.estado_reserva`, `PARCIAL` en `pago.estado_pago`).
 
 ## Contratos que el frontend NO puede cambiar
 
