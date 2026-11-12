@@ -51,15 +51,19 @@ export class LoginComponent {
     this.auth.login(correo, clave).subscribe({
       next: () => {
         this.loading.set(false);
-        const returnUrl = this.route.snapshot.queryParams['returnUrl'] ?? '/dashboard';
-        this.router.navigateByUrl(returnUrl);
+        const returnUrl = this.route.snapshot.queryParams['returnUrl'];
+        const destino =
+          typeof returnUrl === 'string' && returnUrl.startsWith('/') ? returnUrl : '/dashboard';
+        this.router.navigateByUrl(destino, { replaceUrl: true });
       },
       error: (err: HttpErrorResponse) => {
         this.loading.set(false);
         this.errorMessage.set(
-          err.status === 401 || err.status === 400
-            ? 'Correo o contraseña incorrectos.'
-            : 'No se pudo conectar con el servidor. Intenta de nuevo.',
+          err.status === 403
+            ? 'Tu rol no tiene acceso al sistema.'
+            : err.status === 401 || err.status === 400
+              ? 'Correo o contraseña incorrectos.'
+              : 'No se pudo conectar con el servidor. Intenta de nuevo.',
         );
       },
     });

@@ -12,14 +12,38 @@ export interface Cliente {
 }
 
 /** Role of a user; mirrors the backend enum `Rol`. */
-export type Rol = 'ADMIN' | 'RECEPCIONISTA' | 'CLIENTE';
+export type Rol =
+  | 'ADMIN'
+  | 'RECEPCIONISTA'
+  | 'CLIENTE'
+  | 'ENTRENADOR'
+  | 'MANTENIMIENTO'
+  | 'ARBITRO';
+
+/** Roles that can sign in and use the app; the rest exist only as data. */
+export type RolOperativo = 'ADMIN' | 'RECEPCIONISTA' | 'CLIENTE';
+
+/** Personal = every role except CLIENTE. */
+export type RolPersonal = Exclude<Rol, 'CLIENTE'>;
 
 /** Human-readable role names used in chips and menus. */
 export const ROL_LABEL: Record<Rol, string> = {
   ADMIN: 'Administrador',
   RECEPCIONISTA: 'Recepcionista',
   CLIENTE: 'Cliente',
+  ENTRENADOR: 'Entrenador',
+  MANTENIMIENTO: 'Mantenimiento',
+  ARBITRO: 'Árbitro',
 };
+
+/** Roles assignable from the Personal module. */
+export const PERSONAL_ROLES: RolPersonal[] = [
+  'ADMIN',
+  'RECEPCIONISTA',
+  'ENTRENADOR',
+  'MANTENIMIENTO',
+  'ARBITRO',
+];
 
 /** GET /api/auth/me: what the UI needs to know about the current session. */
 export interface UsuarioSesion {
@@ -36,6 +60,11 @@ export interface ClienteAlta {
   apellidos: string;
   correo: string;
   clave: string;
+}
+
+/** POST /api/usuarios/personal: personal creation requires a role. */
+export interface PersonalAlta extends ClienteAlta {
+  rol: RolPersonal;
 }
 
 /** PUT /api/usuarios/{id}: `clave` is optional; empty keeps the current one. */

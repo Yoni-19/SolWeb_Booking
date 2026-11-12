@@ -20,7 +20,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       if (error.status === 401 && !req.url.includes('/api/auth/')) {
         auth.limpiar();
         const returnUrl = router.url;
-        router.navigate(['/login'], returnUrl === '/login' ? {} : { queryParams: { returnUrl } });
+        router.navigate(['/login'], {
+          ...(returnUrl === '/login' ? {} : { queryParams: { returnUrl } }),
+          replaceUrl: true,
+        });
       }
       return throwError(() => error);
     }),

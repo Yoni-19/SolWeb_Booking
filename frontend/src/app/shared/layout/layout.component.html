@@ -30,6 +30,12 @@
           <span matListItemTitle>Clientes</span>
         </a>
       }
+      @if (auth.esAdmin()) {
+        <a mat-list-item routerLink="/personal" routerLinkActive="active" (click)="isMobile().matches && drawer.set(false)">
+          <mat-icon matListItemIcon>badge</mat-icon>
+          <span matListItemTitle>Personal</span>
+        </a>
+      }
     </mat-nav-list>
   </mat-sidenav>
 

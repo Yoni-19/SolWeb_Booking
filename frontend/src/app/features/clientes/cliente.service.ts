@@ -14,20 +14,29 @@ export class ClienteService {
   private readonly http = inject(HttpClient);
   private readonly url = `${API_BASE}/api/usuarios`;
 
-  /** GET /api/usuarios?page=&size= — server-side pagination. */
-  list(page = 0, size = 10): Observable<Pagina<Cliente>> {
-    return this.http.get<Pagina<Cliente>>(this.url, {
-      params: { page, size, sort: 'id,desc' },
-    });
+  /**
+   * GET /api/usuarios?page=&size=&rol= — server-side pagination.
+   * The backend scopes the response by role: an ADMIN sees everyone and may
+   * filter with `rol`; a RECEPCIONISTA always receives only CLIENTE users.
+   */
+  list(page = 0, size = 10, rol?: Rol): Observable<Pagina<Cliente>> {
+    const params: Record<string, string | number> = { page, size, sort: 'id,desc' };
+    if (rol) {
+      params['rol'] = rol;
+    }
+    return this.http.get<Pagina<Cliente>>(this.url, { params });
   }
 
   /**
    * Every client in one shot, for the reservation form's select. It is not a table,
    * so it cannot page; `size` covers the whole catalog of a single complex.
+   * Always filters by CLIENTE: a reservation is never booked for a worker.
    */
   listAll(): Observable<Cliente[]> {
     return this.http
-      .get<Pagina<Cliente>>(this.url, { params: { page: 0, size: 500, sort: 'nombres,asc' } })
+      .get<Pagina<Cliente>>(this.url, {
+        params: { page: 0, size: 500, sort: 'nombres,asc', rol: 'CLIENTE' },
+      })
       .pipe(map((pagina) => pagina.content));
   }
 

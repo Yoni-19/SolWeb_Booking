@@ -60,6 +60,6 @@ export class AuthService {
 
   private finalizar(): void {
     this.limpiar();
-    this.router.navigate(['/login']);
+    this.router.navigate(['/login'], { replaceUrl: true });
   }
 }

@@ -30,6 +30,8 @@ export class ClienteFormComponent {
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   private editingId: number | null = null;
+  /** Evita guardar si por URL se abrió un usuario que no es CLIENTE. */
+  private usuarioInvalido = false;
 
   readonly form = this.fb.nonNullable.group({
     nombres: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
@@ -47,6 +49,12 @@ export class ClienteFormComponent {
         next: (cliente) => {
           if (!cliente) {
             this.errorMessage.set('No existe el cliente solicitado.');
+            this.usuarioInvalido = true;
+            return;
+          }
+          if (cliente.rol && cliente.rol !== 'CLIENTE') {
+            this.errorMessage.set('Ese usuario pertenece al personal, no a clientes.');
+            this.usuarioInvalido = true;
             return;
           }
           this.form.patchValue({
@@ -71,6 +79,7 @@ export class ClienteFormComponent {
   }
 
   submit(): void {
+    if (this.usuarioInvalido) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
