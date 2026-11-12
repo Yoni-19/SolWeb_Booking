@@ -45,6 +45,9 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer>{
     /** Same as above, narrowed to one state (used by the dashboard counters). */
     Page<Reserva> findByUsuario_IdAndEstadoReserva(Integer usuarioId, EstadoReserva estadoReserva, Pageable pageable);
 
+    /** Reservations of one user excluding a state: a client does not see their cancelled ones. */
+    Page<Reserva> findByUsuario_IdAndEstadoReservaNot(Integer usuarioId, EstadoReserva estadoReserva, Pageable pageable);
+
     /** All reservations in one state (staff only). */
     Page<Reserva> findByEstadoReserva(EstadoReserva estadoReserva, Pageable pageable);
 }

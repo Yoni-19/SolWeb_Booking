@@ -66,6 +66,7 @@ public class SecurityConfig {
                 // El logout tiene que poder borrar una cookie vencida: no exige sesion valida.
                 .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/usuarios/personal").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()   // registro público (ACTIVO)
                 // .requestMatchers(HttpMethod.POST, "/api/usuarios").authenticated() // variante: exigir token (descomentar para cambiar)
                 .requestMatchers(HttpMethod.PUT, "/api/usuarios/*/rol").hasRole("ADMIN")
@@ -76,7 +77,13 @@ public class SecurityConfig {
                 // El CLIENTE solo reprograma o cancela SUS reservas: la propiedad se valida en ReservaService.
                 .requestMatchers(HttpMethod.PUT, "/api/reservas/**").hasAnyRole("ADMIN", "RECEPCIONISTA", "CLIENTE")
                 .requestMatchers(HttpMethod.DELETE, "/api/reservas/**").hasAnyRole("ADMIN", "RECEPCIONISTA", "CLIENTE")
+                // Check-in / check-out: solo personal. El CLIENTE tambien entra por aca para
+                // cancelar, pero ReservaService lo limita al dueno y solo permite CANCELADA.
+                .requestMatchers(HttpMethod.PATCH, "/api/reservas/*/estado").hasAnyRole("ADMIN", "RECEPCIONISTA", "CLIENTE")
                 .requestMatchers("/api/reservas/**").hasAnyRole("ADMIN", "RECEPCIONISTA", "CLIENTE")
+                // El CLIENTE puede pagar la seña o el total de SU reserva; PagoService valida
+                // propiedad, monto y que no exista un pago previo. El resto de pagos es del personal.
+                .requestMatchers(HttpMethod.POST, "/api/pagos").hasAnyRole("ADMIN", "RECEPCIONISTA", "CLIENTE")
                 .requestMatchers("/api/pagos/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
                 .anyRequest().authenticated())
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

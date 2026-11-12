@@ -27,11 +27,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.proyectosw.sreservas.model.Cancha;
+import com.proyectosw.sreservas.model.Pago;
 import com.proyectosw.sreservas.model.Reserva;
 import com.proyectosw.sreservas.model.Usuario;
 import com.proyectosw.sreservas.model.enums.EstadoReserva;
 import com.proyectosw.sreservas.model.enums.Rol;
 import com.proyectosw.sreservas.repository.CanchaRepository;
+import com.proyectosw.sreservas.repository.PagoRepository;
 import com.proyectosw.sreservas.repository.ReservaRepository;
 import com.proyectosw.sreservas.repository.UsuarioRepository;
 
@@ -45,6 +47,8 @@ class ReservaServiceTests {
     @Mock
     private UsuarioRepository usuarioRepository;
     @Mock
+    private PagoRepository pagoRepository;
+    @Mock
     private CurrentUserService currentUser;
 
     @InjectMocks
@@ -53,13 +57,15 @@ class ReservaServiceTests {
     @Test
     void elClienteSoloListaSusPropiasReservas() {
         when(currentUser.get()).thenReturn(usuario(2, Rol.CLIENTE));
-        when(repository.findByUsuario_Id(eq(2), any(Pageable.class)))
+        when(repository.findByUsuario_IdAndEstadoReservaNot(
+                eq(2), eq(EstadoReserva.CANCELADA), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(reservaDe(2))));
 
         Page<Reserva> reservas = service.listarTodos(PageRequest.of(0, 10), null);
 
         assertThat(reservas.getContent()).hasSize(1);
         verify(repository, never()).findAll(any(Pageable.class));
+        verify(repository, never()).findByUsuario_Id(anyInt(), any(Pageable.class));
     }
 
     @Test
@@ -158,6 +164,83 @@ class ReservaServiceTests {
                 .isEqualTo(HttpStatus.CONFLICT);
     }
 
+    @Test
+    void noSePuedeConfirmarUnaReservaSinRegistrarLaSenia() {
+        when(currentUser.get()).thenReturn(usuario(9, Rol.ADMIN));
+        when(repository.findById(5)).thenReturn(Optional.of(reservaDe(2)));
+
+        assertThatThrownBy(() -> service.cambiarEstado(5, EstadoReserva.CONFIRMADA))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void noSePuedeIniciarUnaReservaSinPagoRegistrado() {
+        when(currentUser.get()).thenReturn(usuario(9, Rol.ADMIN));
+        Reserva confirmada = reservaDe(2);
+        confirmada.setEstadoReserva(EstadoReserva.CONFIRMADA);
+        when(repository.findById(5)).thenReturn(Optional.of(confirmada));
+        when(pagoRepository.findByReserva_Id(5)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.cambiarEstado(5, EstadoReserva.EN_CURSO))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void noSePuedeCompletarUnaReservaConSaldoPendiente() {
+        when(currentUser.get()).thenReturn(usuario(9, Rol.ADMIN));
+        Reserva enCurso = reservaDe(2);
+        enCurso.setEstadoReserva(EstadoReserva.EN_CURSO);
+        when(repository.findById(5)).thenReturn(Optional.of(enCurso));
+
+        Pago pago = new Pago();
+        pago.setMonto(new BigDecimal("50.00"));
+        when(pagoRepository.findByReserva_Id(5)).thenReturn(Optional.of(pago));
+
+        assertThatThrownBy(() -> service.cambiarEstado(5, EstadoReserva.COMPLETADA))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+        verify(repository, never()).save(any(Reserva.class));
+    }
+
+    @Test
+    void elCheckOutConElPagoCompletoCompletaLaReserva() {
+        when(currentUser.get()).thenReturn(usuario(9, Rol.ADMIN));
+        Reserva enCurso = reservaDe(2);
+        enCurso.setEstadoReserva(EstadoReserva.EN_CURSO);
+        when(repository.findById(5)).thenReturn(Optional.of(enCurso));
+        when(repository.save(any(Reserva.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Pago pago = new Pago();
+        pago.setMonto(new BigDecimal("75.00"));
+        when(pagoRepository.findByReserva_Id(5)).thenReturn(Optional.of(pago));
+
+        Reserva completada = service.cambiarEstado(5, EstadoReserva.COMPLETADA);
+
+        assertThat(completada.getEstadoReserva()).isEqualTo(EstadoReserva.COMPLETADA);
+    }
+
+    @Test
+    void noSePuedeReprogramarSiElPagoSuperaElNuevoTotal() {
+        when(currentUser.get()).thenReturn(usuario(9, Rol.ADMIN));
+        when(repository.findById(5)).thenReturn(Optional.of(reservaDe(2)));
+        when(canchaRepository.findById(1)).thenReturn(Optional.of(canchaActiva()));
+
+        Pago pago = new Pago();
+        pago.setMonto(new BigDecimal("200.00"));
+        when(pagoRepository.findByReserva_Id(5)).thenReturn(Optional.of(pago));
+
+        assertThatThrownBy(() -> service.actualizar(5, reservaPara(1, null)))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+        verify(repository, never()).save(any(Reserva.class));
+    }
+
     private Usuario usuario(Integer id, Rol rol) {
         Usuario usuario = new Usuario();
         usuario.setId(id);
@@ -176,6 +259,8 @@ class ReservaServiceTests {
         reserva.setCancha(canchaActiva());
         reserva.setFechaHoraInicio(LocalDateTime.of(2026, 12, 1, 10, 0));
         reserva.setFechaHoraFin(LocalDateTime.of(2026, 12, 1, 11, 0));
+        reserva.setEstadoReserva(EstadoReserva.PENDIENTE);
+        reserva.setMontoTotal(new BigDecimal("75.00"));
         return reserva;
     }
 

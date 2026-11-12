@@ -1,5 +1,5 @@
 package com.proyectosw.sreservas.model.enums;
 
 public enum EstadoReserva {
-    PENDIENTE, CONFIRMADA, CANCELADA, COMPLETADA
+    PENDIENTE, CONFIRMADA, EN_CURSO, CANCELADA, COMPLETADA
 }

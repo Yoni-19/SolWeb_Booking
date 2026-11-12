@@ -6,12 +6,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.proyectosw.sreservas.config.AuthCookies;
 
@@ -26,6 +29,7 @@ import jakarta.servlet.http.Cookie;
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class PaginacionApiTests {
 
     private static final String CLAVE_SEED = "test123";
@@ -36,6 +40,9 @@ class PaginacionApiTests {
     @Test
     void elListadoDeReservasDevuelveMetadatosDePaginacion() throws Exception {
         Cookie sesion = cookieDe("admin@email.com");
+        // La base de demo puede estar vacia: la pagina necesita al menos una fila.
+        crearReserva(sesion, 1);
+        crearReserva(sesion, 2);
 
         mockMvc.perform(get("/api/reservas?page=0&size=2").cookie(sesion))
                 .andExpect(status().isOk())
@@ -87,6 +94,19 @@ class PaginacionApiTests {
                 .andExpect(jsonPath("$.components.securitySchemes.cookieAuth.in").value("cookie"))
                 .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.type").value("http"))
                 .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"));
+    }
+
+    /** El ADMIN reserva para Laura (id 2 del seed) en una fecha futura y sin solaparse. */
+    private void crearReserva(Cookie sesion, int dias) throws Exception {
+        LocalDateTime inicio = LocalDateTime.now().plusYears(6).plusDays(dias)
+                .withHour(10).withMinute(0).withSecond(0).withNano(0);
+        mockMvc.perform(post("/api/reservas")
+                        .cookie(sesion)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fechaHoraInicio":"%s","fechaHoraFin":"%s","canchaId":1,"usuarioId":2}
+                                """.formatted(inicio, inicio.plusHours(1))))
+                .andExpect(status().isCreated());
     }
 
     /** Login real: devuelve la cookie httpOnly con la que se autentican las requests. */

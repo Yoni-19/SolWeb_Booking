@@ -14,11 +14,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.proyectosw.sreservas.model.Cancha;
+import com.proyectosw.sreservas.model.Pago;
 import com.proyectosw.sreservas.model.Reserva;
 import com.proyectosw.sreservas.model.Usuario;
+import com.proyectosw.sreservas.model.enums.EstadoPago;
 import com.proyectosw.sreservas.model.enums.EstadoReserva;
 import com.proyectosw.sreservas.model.enums.Rol;
 import com.proyectosw.sreservas.repository.CanchaRepository;
+import com.proyectosw.sreservas.repository.PagoRepository;
 import com.proyectosw.sreservas.repository.ReservaRepository;
 import com.proyectosw.sreservas.repository.UsuarioRepository;
 
@@ -27,18 +30,22 @@ import jakarta.transaction.Transactional;
 @Service
 public class ReservaService {
     private static final Collection<EstadoReserva> ESTADOS_QUE_OCUPAN =
-            List.of(EstadoReserva.PENDIENTE, EstadoReserva.CONFIRMADA, EstadoReserva.COMPLETADA);
+            List.of(EstadoReserva.PENDIENTE, EstadoReserva.CONFIRMADA,
+                    EstadoReserva.EN_CURSO, EstadoReserva.COMPLETADA);
 
     private final ReservaRepository repository;
     private final CanchaRepository canchaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final PagoRepository pagoRepository;
     private final CurrentUserService currentUser;
 
     public ReservaService(final ReservaRepository repository, final CanchaRepository canchaRepository,
-            final UsuarioRepository usuarioRepository, final CurrentUserService currentUser) {
+            final UsuarioRepository usuarioRepository, final PagoRepository pagoRepository,
+            final CurrentUserService currentUser) {
         this.repository = repository;
         this.canchaRepository = canchaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.pagoRepository = pagoRepository;
         this.currentUser = currentUser;
     }
 
@@ -50,8 +57,9 @@ public class ReservaService {
     public Page<Reserva> listarTodos(Pageable pageable, EstadoReserva estado) {
         Usuario actual = currentUser.get();
         if (Rol.CLIENTE.equals(actual.getRol())) {
+            // El cliente no ve sus canceladas: no muestran el estado y solo ensucian el listado.
             return estado == null
-                    ? repository.findByUsuario_Id(actual.getId(), pageable)
+                    ? repository.findByUsuario_IdAndEstadoReservaNot(actual.getId(), EstadoReserva.CANCELADA, pageable)
                     : repository.findByUsuario_IdAndEstadoReserva(actual.getId(), estado, pageable);
         }
         return estado == null
@@ -116,9 +124,10 @@ public class ReservaService {
         // Un CLIENTE solo reprograma sus propias reservas; el personal puede con todas.
         verificarPropiedad(existente);
 
-        if (existente.getEstadoReserva() == EstadoReserva.COMPLETADA) {
+        if (existente.getEstadoReserva() != EstadoReserva.PENDIENTE
+                && existente.getEstadoReserva() != EstadoReserva.CONFIRMADA) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "No se puede reprogramar una reserva completada");
+                    "Solo se puede reprogramar una reserva pendiente o confirmada");
         }
 
         if (datos.getFechaHoraInicio() != null) existente.setFechaHoraInicio(datos.getFechaHoraInicio());
@@ -142,6 +151,7 @@ public class ReservaService {
                 existente.getFechaHoraInicio(), existente.getFechaHoraFin());
 
         recalcularMonto(existente);
+        actualizarEstadoPago(existente);
 
         return repository.save(existente);      
     }
@@ -155,11 +165,69 @@ public class ReservaService {
         // Un CLIENTE solo cancela sus propias reservas.
         verificarPropiedad(existente);
 
-        if (existente.getEstadoReserva() == EstadoReserva.COMPLETADA) {
+        if (existente.getEstadoReserva() == EstadoReserva.COMPLETADA
+                || existente.getEstadoReserva() == EstadoReserva.EN_CURSO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "No se puede cancelar una reserva completada");
+                    "No se puede eliminar una reserva completada o en curso");
         }
         repository.delete(existente);
+    }
+
+    /**
+     * Cambia el estado de una reserva respetando el ciclo de vida:
+     * PENDIENTE -> CANCELADA, CONFIRMADA -> EN_CURSO (check-in) o CANCELADA,
+     * y EN_CURSO -> COMPLETADA (check-out). La confirmacion no se hace a mano:
+     * la produce el registro de la seña en {@link PagoService}.
+     * El check-in/out es exclusivo del personal; el CLIENTE solo puede cancelar
+     * sus propias reservas.
+     */
+    @Transactional
+    public Reserva cambiarEstado(Integer id, EstadoReserva destino) {
+        Reserva existente = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No existe reserva con id " + id));
+
+        Usuario actual = currentUser.get();
+        if (Rol.CLIENTE.equals(actual.getRol())) {
+            if (destino != EstadoReserva.CANCELADA) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Solo el personal puede iniciar o completar una reserva");
+            }
+            verificarPropiedad(existente);
+        }
+
+        EstadoReserva estadoActual = existente.getEstadoReserva();
+        if (!transicionPermitida(estadoActual, destino)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede pasar de " + estadoActual + " a " + destino);
+        }
+
+        if (destino == EstadoReserva.EN_CURSO
+                && pagoRepository.findByReserva_Id(id).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Registrá la seña antes de iniciar la reserva");
+        }
+        if (destino == EstadoReserva.COMPLETADA) {
+            BigDecimal pagado = pagoRepository.findByReserva_Id(id)
+                    .map(Pago::getMonto)
+                    .orElse(BigDecimal.ZERO);
+            if (pagado.compareTo(existente.getMontoTotal()) < 0) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Falta cobrar el saldo antes de completar la reserva");
+            }
+        }
+
+        existente.setEstadoReserva(destino);
+        return repository.save(existente);
+    }
+
+    private boolean transicionPermitida(EstadoReserva actual, EstadoReserva destino) {
+        return switch (actual) {
+            case PENDIENTE -> destino == EstadoReserva.CANCELADA;
+            case CONFIRMADA -> destino == EstadoReserva.EN_CURSO || destino == EstadoReserva.CANCELADA;
+            case EN_CURSO -> destino == EstadoReserva.COMPLETADA;
+            case COMPLETADA, CANCELADA -> false;
+        };
     }
 
     /** Un cliente no puede ver reservas ajenas; el personal si. */
@@ -180,6 +248,23 @@ public class ReservaService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "La cancha ya está reservada en ese horario");
         }
+    }
+
+    /**
+     * Si la reserva ya tiene un pago, valida que el nuevo total no quede por
+     * debajo de lo abonado y recalcula si el pago es PARCIAL o PAGADO.
+     */
+    private void actualizarEstadoPago(Reserva reserva) {
+        pagoRepository.findByReserva_Id(reserva.getId()).ifPresent(pago -> {
+            if (pago.getMonto().compareTo(reserva.getMontoTotal()) > 0) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "El pago registrado supera el nuevo total de la reserva");
+            }
+            pago.setEstadoPago(pago.getMonto().compareTo(reserva.getMontoTotal()) >= 0
+                    ? EstadoPago.PAGADO
+                    : EstadoPago.PARCIAL);
+            pagoRepository.save(pago);
+        });
     }
 
     private void recalcularMonto(Reserva reserva) {
