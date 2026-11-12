@@ -1,0 +1,48 @@
+.pago-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 360px;
+}
+
+.resumen {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.montos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-high);
+
+  dt {
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+
+  dd {
+    margin: 2px 0 0;
+    font-weight: 600;
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+.pago-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mat-sys-error);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 480px) {
+  .pago-content {
+    min-width: 0;
+  }
+}

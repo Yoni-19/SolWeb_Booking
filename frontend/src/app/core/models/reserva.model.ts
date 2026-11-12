@@ -1,7 +1,15 @@
-/** Matches backend EstadoReserva enum (model/enums/EstadoReserva.java). */
-export type EstadoReserva = 'PENDIENTE' | 'CONFIRMADA' | 'CANCELADA' | 'COMPLETADA';
+import type { EstadoPago } from './pago.model';
 
-export const ESTADOS_RESERVA: EstadoReserva[] = ['PENDIENTE', 'CONFIRMADA', 'CANCELADA', 'COMPLETADA'];
+/** Matches backend EstadoReserva enum (model/enums/EstadoReserva.java). */
+export type EstadoReserva = 'PENDIENTE' | 'CONFIRMADA' | 'EN_CURSO' | 'CANCELADA' | 'COMPLETADA';
+
+export const ESTADOS_RESERVA: EstadoReserva[] = [
+  'PENDIENTE',
+  'CONFIRMADA',
+  'EN_CURSO',
+  'CANCELADA',
+  'COMPLETADA',
+];
 
 /** Matches backend ReservaResponse DTO (nested entities flattened to id + name). */
 export interface Reserva {
@@ -14,6 +22,10 @@ export interface Reserva {
   canchaNombre?: string;
   usuarioId: number | null;
   usuarioNombre?: string;
+  /** 1:1 payment summary; null until the first payment is registered. */
+  estadoPago: EstadoPago | null;
+  montoPagado: number;
+  saldo: number;
 }
 
 /**

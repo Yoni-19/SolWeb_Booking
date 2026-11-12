@@ -6,6 +6,13 @@
     </a>
   </app-page-header>
 
+  @if (esCliente()) {
+    <p class="pago-hint">
+      <mat-icon>credit_card</mat-icon>
+      <span>Pago simulado desde la web: podés abonar la seña del 50% o el total. El saldo restante se paga en recepción.</span>
+    </p>
+  }
+
   @if (loading()) {
     <div class="reserva-estado-carga">
       <mat-spinner diameter="32" strokeWidth="3" />
@@ -38,6 +45,32 @@
         </td>
       </ng-container>
 
+      <ng-container matColumnDef="total">
+        <th mat-header-cell *matHeaderCellDef>Total</th>
+        <td mat-cell *matCellDef="let r">{{ r.montoTotal | number: '1.2-2' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="pagado">
+        <th mat-header-cell *matHeaderCellDef>Pagado</th>
+        <td mat-cell *matCellDef="let r">{{ r.montoPagado | number: '1.2-2' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="saldo">
+        <th mat-header-cell *matHeaderCellDef>Saldo</th>
+        <td mat-cell *matCellDef="let r" [class.saldo-pendiente]="r.saldo > 0">
+          {{ r.saldo | number: '1.2-2' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="pago">
+        <th mat-header-cell *matHeaderCellDef>Pago</th>
+        <td mat-cell *matCellDef="let r">
+          <span class="pago-chip" [class]="'pago-' + (r.estadoPago ?? 'sin_pago').toLowerCase()">
+            {{ etiquetaPago(r) }}
+          </span>
+        </td>
+      </ng-container>
+
       <ng-container matColumnDef="estado">
         <th mat-header-cell *matHeaderCellDef>Estado</th>
         <td mat-cell *matCellDef="let r">
@@ -47,27 +80,51 @@
         </td>
       </ng-container>
 
-      <ng-container matColumnDef="monto">
-        <th mat-header-cell *matHeaderCellDef>Monto</th>
-        <td mat-cell *matCellDef="let r">{{ r.montoTotal | number: '1.0-0' }}</td>
-      </ng-container>
-
-      @if (puedeGestionar()) {
-        <ng-container matColumnDef="acciones">
-          <th mat-header-cell *matHeaderCellDef>Acciones</th>
-          <td mat-cell *matCellDef="let r">
-            <a mat-icon-button [routerLink]="['/reservas', r.id, 'editar']" aria-label="Editar">
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef>Acciones</th>
+        <td mat-cell *matCellDef="let r" class="acciones">
+          @if (puedePagar(r)) {
+            <button mat-flat-button color="primary" class="accion-pago" (click)="pagarSenia(r)">
+              Seña {{ senia(r) | number: '1.2-2' }}
+            </button>
+            <button mat-button (click)="pagarTotal(r)">
+              Total {{ r.montoTotal | number: '1.2-2' }}
+            </button>
+          }
+          @if (puedeCobrar(r)) {
+            <button mat-flat-button color="primary" (click)="abrirPago(r)">
+              <mat-icon>payments</mat-icon>
+              <span>Cobrar</span>
+            </button>
+          }
+          @if (puedeIniciar(r)) {
+            <button mat-button (click)="iniciar(r)">
+              <mat-icon>login</mat-icon>
+              <span>Iniciar</span>
+            </button>
+          }
+          @if (puedeFinalizar(r)) {
+            <button mat-button (click)="finalizar(r)">
+              <mat-icon>logout</mat-icon>
+              <span>Finalizar</span>
+            </button>
+          }
+          @if (puedeEditar(r)) {
+            <a mat-icon-button [routerLink]="['/reservas', r.id, 'editar']" aria-label="Editar reserva">
               <mat-icon>edit</mat-icon>
             </a>
-            <button mat-icon-button (click)="eliminar(r)" aria-label="Eliminar">
-              <mat-icon>delete</mat-icon>
+          }
+          @if (puedeEditar(r)) {
+            <button mat-icon-button (click)="cancelar(r)" aria-label="Cancelar reserva">
+              <mat-icon>cancel</mat-icon>
             </button>
-          </td>
-        </ng-container>
-      }
+          }
+        </td>
+      </ng-container>
 
       <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns()"
+          [class.fila-cancelada]="row.estadoReserva === 'CANCELADA'"></tr>
     </table>
   </div>
 

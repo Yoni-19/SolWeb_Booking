@@ -19,15 +19,6 @@
             @if (form.controls.usuarioId.hasError('required')) {
               <mat-error>Selecciona un cliente</mat-error>
             }
-            @if (isEdit()) {
-              <mat-hint>El cliente no se puede cambiar en una reserva existente</mat-hint>
-            }
-          </mat-form-field>
-        } @else {
-          <mat-form-field appearance="outline">
-            <mat-label>Cliente</mat-label>
-            <input matInput [value]="auth.sesion()?.nombres ?? auth.correo() ?? ''" readonly />
-            <mat-hint>La reserva se registra a tu nombre</mat-hint>
           </mat-form-field>
         }
 
@@ -68,15 +59,39 @@
           </mat-form-field>
         </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Estado</mat-label>
-          <input matInput [value]="estadoActual() ?? 'PENDIENTE'" readonly />
-          @if (isEdit()) {
-            <mat-hint>El estado lo define el backend y no se puede editar desde aquí</mat-hint>
-          } @else {
-            <mat-hint>Las reservas nuevas se crean en estado PENDIENTE</mat-hint>
+        @if (!isEdit()) {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Pago inicial</mat-label>
+            <mat-select formControlName="pagoInicial">
+              <mat-option value="DESPUES">Sin pago ahora</mat-option>
+              <mat-option value="SENIA">Seña 50%</mat-option>
+              <mat-option value="TOTAL">Pago total</mat-option>
+            </mat-select>
+            <mat-hint>Sin seña la reserva queda pendiente</mat-hint>
+          </mat-form-field>
+
+          @if (form.controls.pagoInicial.value !== 'DESPUES') {
+            <mat-form-field appearance="outline">
+              <mat-label>Método de pago</mat-label>
+              @if (auth.esCliente()) {
+                <input matInput value="Tarjeta (pago simulado)" readonly />
+              } @else {
+                <mat-select formControlName="metodoPago">
+                  <mat-option value="EFECTIVO">Efectivo</mat-option>
+                  <mat-option value="TRANSFERENCIA">Transferencia</mat-option>
+                  <mat-option value="TARJETA">Tarjeta</mat-option>
+                </mat-select>
+              }
+            </mat-form-field>
           }
-        </mat-form-field>
+        }
+
+        @if (isEdit() && auth.esStaff()) {
+          <mat-form-field appearance="outline">
+            <mat-label>Estado</mat-label>
+            <input matInput [value]="estadoActual() ?? 'PENDIENTE'" readonly />
+          </mat-form-field>
+        }
 
         @if (errorMessage()) {
           <div class="full-width form-error" role="alert">

@@ -40,7 +40,8 @@ export class ReservaService {
     return this.http.put<Reserva>(`${this.url}/${id}`, reserva);
   }
 
-  remove(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.url}/${id}`);
+  /** PATCH /api/reservas/{id}/estado — check-in/out (staff) y cancelación (staff o cliente dueño). */
+  cambiarEstado(id: number, estado: EstadoReserva): Observable<Reserva> {
+    return this.http.patch<Reserva>(`${this.url}/${id}/estado`, { estadoReserva: estado });
   }
 }

@@ -13,12 +13,17 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { apiErrorMessage } from '../../core/http/api-error';
 import { Cancha } from '../../core/models/cancha.model';
 import { Cliente } from '../../core/models/cliente.model';
+import { MetodoPago } from '../../core/models/pago.model';
 import { EstadoReserva, ReservaAlta } from '../../core/models/reserva.model';
 import { AuthService } from '../../core/services/auth.service';
 import { PageHeader } from '../../shared/ui/page-header.component';
 import { CanchaService } from '../canchas/cancha.service';
 import { ClienteService } from '../clientes/cliente.service';
+import { PagoService } from '../pagos/pago.service';
 import { ReservaService } from './reserva.service';
+
+/** Pago que se puede registrar al crear la reserva (el saldo queda para despues). */
+type PagoInicial = 'DESPUES' | 'SENIA' | 'TOTAL';
 
 /** Builds "yyyy-MM-ddTHH:mm" from the LOCAL date, so no timezone shift is applied. */
 function toLocalDateTime(date: Date, time: string): string {
@@ -38,6 +43,7 @@ function toLocalDateTime(date: Date, time: string): string {
 export class ReservaFormComponent {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(ReservaService);
+  private readonly pagoService = inject(PagoService);
   private readonly canchaService = inject(CanchaService);
   private readonly clienteService = inject(ClienteService);
   private readonly router = inject(Router);
@@ -61,6 +67,9 @@ export class ReservaFormComponent {
     fecha: [null as Date | null, Validators.required],
     horaInicio: ['10:00', Validators.required],
     horaFin: ['12:00', Validators.required],
+    // Solo se usa al crear: la reserva nace PENDIENTE hasta que entra la seña.
+    pagoInicial: ['DESPUES' as PagoInicial],
+    metodoPago: ['EFECTIVO' as MetodoPago],
   });
 
   constructor() {
@@ -125,7 +134,8 @@ export class ReservaFormComponent {
       return;
     }
 
-    const { usuarioId, canchaId, fecha, horaInicio, horaFin } = this.form.getRawValue();
+    const { usuarioId, canchaId, fecha, horaInicio, horaFin, pagoInicial, metodoPago } =
+      this.form.getRawValue();
     if (canchaId == null || fecha == null || (!this.auth.esCliente() && usuarioId == null)) {
       this.form.markAllAsTouched();
       return;
@@ -154,15 +164,43 @@ export class ReservaFormComponent {
       : this.service.create(payload);
 
     request$.subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.snackBar.open('Reserva guardada.', 'Cerrar', { duration: 3000 });
-        this.router.navigate(['/reservas']);
+      next: (reserva) => {
+        if (this.isEdit() || pagoInicial === 'DESPUES' || reserva.id == null) {
+          this.finalizar(
+            this.isEdit()
+              ? 'Reserva actualizada.'
+              : 'Reserva registrada. Queda pendiente hasta registrar la seña.',
+          );
+          return;
+        }
+
+        // La seña es el 50% del total; el cliente paga simulado con tarjeta.
+        const monto = pagoInicial === 'SENIA'
+          ? Math.round(reserva.montoTotal * 50) / 100
+          : reserva.montoTotal;
+
+        this.pagoService.create({
+          reservaId: reserva.id,
+          monto,
+          metodoPago: this.auth.esCliente() ? 'TARJETA' : metodoPago,
+        }).subscribe({
+          next: () => this.finalizar('Reserva creada con pago registrado.'),
+          error: (err) => this.finalizar(
+            `Reserva creada sin pago: ${apiErrorMessage(err, 'no se pudo registrar el pago')}. `
+              + 'Reintentá desde Mis reservas.',
+          ),
+        });
       },
       error: (err) => {
         this.loading.set(false);
         this.errorMessage.set(apiErrorMessage(err, 'No se pudo guardar la reserva'));
       },
     });
+  }
+
+  private finalizar(mensaje: string): void {
+    this.loading.set(false);
+    this.snackBar.open(mensaje, 'Cerrar', { duration: 5000 });
+    this.router.navigate(['/reservas']);
   }
 }

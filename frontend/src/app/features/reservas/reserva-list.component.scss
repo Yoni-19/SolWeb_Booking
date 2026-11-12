@@ -6,6 +6,14 @@
 
 .reserva-table {
   width: 100%;
+
+  .fila-cancelada {
+    opacity: 0.6;
+  }
+
+  .acciones {
+    white-space: nowrap;
+  }
 }
 
 .reserva-estado-carga {
@@ -20,12 +28,42 @@
   opacity: 0.7;
 }
 
-.estado-chip {
+.pago-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-high);
+  font-size: 0.85rem;
+  opacity: 0.9;
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+    color: var(--mat-sys-primary);
+  }
+}
+
+.saldo-pendiente {
+  font-weight: 600;
+  color: var(--mat-sys-error);
+}
+
+.accion-pago {
+  margin-right: 4px;
+}
+
+.estado-chip,
+.pago-chip {
   display: inline-block;
   padding: 2px 10px;
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .estado-pendiente {
@@ -38,12 +76,41 @@
   color: var(--mat-sys-on-primary-container);
 }
 
-.estado-completada {
+.estado-en_curso {
   background: var(--mat-sys-secondary-container);
   color: var(--mat-sys-on-secondary-container);
+}
+
+.estado-completada {
+  background: var(--mat-sys-surface-container-highest);
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .estado-cancelada {
   background: var(--mat-sys-error-container);
   color: var(--mat-sys-on-error-container);
+}
+
+.pago-sin_pago {
+  background: var(--mat-sys-surface-container-highest);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.pago-parcial {
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}
+
+.pago-pagado {
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}
+
+.pago-reembolsado {
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+mat-paginator {
+  margin-top: 16px;
 }

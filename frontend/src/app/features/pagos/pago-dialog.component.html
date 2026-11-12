@@ -1,0 +1,61 @@
+<h2 mat-dialog-title>Registrar pago</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="pago-content">
+    <p class="resumen">
+      Reserva #{{ data.reserva.id }} · {{ data.reserva.canchaNombre }}
+    </p>
+
+    <dl class="montos">
+      <div>
+        <dt>Total</dt>
+        <dd>{{ data.reserva.montoTotal | number: '1.2-2' }}</dd>
+      </div>
+      <div>
+        <dt>Pagado</dt>
+        <dd>{{ data.reserva.montoPagado | number: '1.2-2' }}</dd>
+      </div>
+      <div>
+        <dt>Saldo</dt>
+        <dd>{{ saldo | number: '1.2-2' }}</dd>
+      </div>
+    </dl>
+
+    <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+      <mat-label>Monto a registrar</mat-label>
+      <span matTextPrefix>$&nbsp;</span>
+      <input matInput type="number" formControlName="monto" min="0.01" [max]="saldo" step="0.01" />
+      @if (esPrimerPago) {
+        <mat-hint>Primer pago: mínimo la seña del 50% ({{ senia | number: '1.2-2' }})</mat-hint>
+      } @else {
+        <mat-hint>Saldo pendiente: {{ saldo | number: '1.2-2' }}</mat-hint>
+      }
+      @if (form.controls.monto.hasError('min')) {
+        <mat-error>El monto debe ser mayor a cero</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Método de pago</mat-label>
+      <mat-select formControlName="metodoPago">
+        <mat-option value="EFECTIVO">Efectivo</mat-option>
+        <mat-option value="TRANSFERENCIA">Transferencia</mat-option>
+        <mat-option value="TARJETA">Tarjeta</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    @if (errorMessage()) {
+      <div class="pago-error" role="alert">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Cancelar</button>
+    <button mat-flat-button color="primary" type="submit" [disabled]="loading()">
+      Registrar pago
+    </button>
+  </mat-dialog-actions>
+</form>
