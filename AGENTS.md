@@ -6,7 +6,7 @@ Monorepo con dos subproyectos independientes que comparten un solo repositorio g
 
 | Carpeta | Qué es | Documentación |
 |---|---|---|
-| `backend/` | API REST — Spring Boot 4, Java 25, MySQL, JWT | `backend/AGENTS.md`, `backend/README.md` |
+| `backend/` | API REST — Spring Boot 4, Java 25, PostgreSQL, JWT | `backend/AGENTS.md`, `backend/README.md` |
 | `frontend/` | SPA — Angular 22 standalone, signals, Material | `frontend/README.md` |
 
 Cada carpeta tiene **su propio `.gitignore`** y sus reglas aplican solo dentro de ella.
@@ -17,11 +17,14 @@ El `.gitignore` de la raíz cubre únicamente la raíz (van anclados con `/` a p
 Todo se corre **desde la carpeta del subproyecto**:
 
 ```powershell
+# PostgreSQL local (desde la raíz del repo)
+docker compose up -d
+
 # backend
 cd backend
 .\mvnw.cmd clean compile      # build oficial
 .\mvnw.cmd spring-boot:run    # API en http://localhost:8080
-.\mvnw.cmd test               # tests (requiere MySQL arriba)
+.\mvnw.cmd test               # tests (requiere PostgreSQL arriba)
 
 # frontend
 cd frontend
@@ -29,6 +32,9 @@ npm install
 npm start                     # SPA en http://localhost:4200
 npm run build                 # build de producción
 ```
+
+Despliegue: frontend en Vercel, backend en Render y PostgreSQL en Supabase. El detalle de
+variables y del proxy `/api` está en `backend/README.md` y `frontend/README.md`.
 
 ## VS Code
 

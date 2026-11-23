@@ -1,6 +1,6 @@
 # sreservas — Backend
 
-API REST del Sistema de Reservas de un complejo deportivo. Spring Boot sobre MySQL, con JWT
+API REST del Sistema de Reservas de un complejo deportivo. Spring Boot sobre PostgreSQL, con JWT
 transportado en una cookie `httpOnly`.
 
 ## Stack
@@ -11,23 +11,26 @@ transportado en una cookie `httpOnly`.
 | Spring Boot | 4.1.1 |
 | Spring Security + JWT (jjwt) | 6.x / 0.12.6 |
 | JPA / Hibernate | 7.4.5 |
-| MySQL | 8.0 |
+| PostgreSQL | 17 |
 
 Sin Lombok: getters, setters y constructores se escriben explícitos.
 
 ## Requisitos
 
 - JDK 25
-- MySQL 8 corriendo en `localhost:3306` (la base `db_complejoDeportivo` se crea sola)
+- Docker Desktop (para PostgreSQL local)
 - Maven no hace falta instalado: el proyecto incluye el wrapper (`mvnw.cmd`)
 
 ## Cómo correr
 
 ```powershell
+# Desde la raíz del repo
+docker compose up -d          # PostgreSQL en localhost:5433
+
 cd backend
 .\mvnw.cmd clean compile      # build oficial
 .\mvnw.cmd spring-boot:run    # levanta en http://localhost:8080
-.\mvnw.cmd test               # tests (requiere MySQL arriba)
+.\mvnw.cmd test               # tests (requiere PostgreSQL arriba)
 ```
 
 ### En VS Code
@@ -40,7 +43,7 @@ cd backend
 
 La base se inicializa sola: `spring.jpa.hibernate.ddl-auto=update` crea el esquema y
 `src/main/resources/data.sql` inserta los datos iniciales de forma idempotente
-(`INSERT IGNORE`), así que se puede volver a correr sin duplicar nada.
+(`ON CONFLICT DO NOTHING` + `setval`), así que se puede volver a correr sin duplicar nada.
 
 ## Credenciales de prueba
 
@@ -131,8 +134,10 @@ Consecuencias de diseño:
 - **Mismo host en desarrollo.** Usá `localhost` para el frontend y la API, o `127.0.0.1` para
   ambos. Mezclarlos (`localhost:4200` → `127.0.0.1:8080`) hace que el navegador los trate como
   sitios distintos y no mande la cookie.
-- **CORS con credenciales.** `SecurityConfig` habilita `allowCredentials(true)` para
-  `http://localhost:4200` y `http://127.0.0.1:4200`; con `*` el navegador rechazaría la cookie.
+- **CORS con credenciales.** `SecurityConfig` habilita `allowCredentials(true)` y lee los
+  orígenes de `CORS_ALLOWED_ORIGINS` (por defecto `http://localhost:4200` y
+  `http://127.0.0.1:4200`); con `*` el navegador rechazaría la cookie. En producción el proxy
+  de Vercel hace que todo sea mismo origen y CORS no se dispare.
 
 ## Paginación
 
@@ -196,7 +201,8 @@ Reglas de negocio implementadas:
 - **Contratos**: las respuestas usan DTOs (`dto/`), nunca las entidades. El hash BCrypt de
   la clave nunca sale por la API.
 - **Último administrador**: no se puede quitar el rol al último `ADMIN` (`409`).
-- **CORS**: habilitado para `http://localhost:4200` y `http://127.0.0.1:4200` (frontend Angular).
+- **CORS**: configurable con `CORS_ALLOWED_ORIGINS` (por defecto `http://localhost:4200` y
+  `http://127.0.0.1:4200`).
 - **Ciclo de vida**: la reserva nace `PENDIENTE`; registrar la seña la pasa a `CONFIRMADA`;
   el check-in del personal la pasa a `EN_CURSO`; el check-out o el pago del saldo estando
   `EN_CURSO` la completan. Cancelar solo aplica a `PENDIENTE`/`CONFIRMADA`.
@@ -209,14 +215,64 @@ Reglas de negocio implementadas:
 - **Reprogramación con pago**: se recalcula el total; si lo ya abonado supera el nuevo total
   devuelve `409`, si no, se actualiza `estadoPago` a `PARCIAL` o `PAGADO`.
 
-### Migración de enums existentes
+### Enums en PostgreSQL
 
-Hibernate (`ddl-auto=update`) **no** modifica columnas `enum` ya creadas. Si la base es anterior
-a `EN_CURSO`/`PARCIAL`, corré una vez:
+En PostgreSQL los `@Enumerated(STRING)` se guardan como `varchar`, no como `ENUM` nativo: agregar
+un valor nuevo al enum de Java no requiere migración de base. El viejo script MySQL
+`scripts/migrate-estados-pago.sql` ya no existe ni hace falta.
 
-```powershell
-& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -uroot -p db_complejoDeportivo < scripts/migrate-estados-pago.sql
+## Despliegue (Render + Supabase + Vercel)
+
+La arquitectura es: Angular en Vercel → proxy `/api` → Spring Boot en Render → PostgreSQL en
+Supabase. El proxy hace que el navegador vea un solo origen, así que la cookie `SameSite=Strict`
+viaja sin problemas.
+
+### Supabase
+
+1. Crear el proyecto y guardar la contraseña.
+2. En **Connect → Session pooler** copiar host, puerto `5432` y usuario
+   `postgres.[PROJECT-REF]`.
+3. Usar el Session Pooler (IPv4): Render no tiene salida IPv6 y el transaction pooler (`6543`)
+   no soporta bien los prepared statements de Hibernate.
+4. La URL lleva `?sslmode=require`.
+
+El plan free tiene 500 MB, se pausa a los 7 días sin actividad y no incluye backups
+automáticos: despertalo antes de la demo y exportá un dump.
+
+### Render
+
+- Root Directory: `backend`.
+- Runtime: Docker (`backend/Dockerfile`).
+- Variables de entorno:
+
+```text
+DB_URL=jdbc:postgresql://aws-[INDEX]-[REGION].pooler.supabase.com:5432/postgres?sslmode=require
+DB_USER=postgres.[PROJECT-REF]
+DB_PASSWORD=<password>
+JWT_SECRET=<secreto-largo>
+COOKIE_SECURE=true
+CORS_ALLOWED_ORIGINS=https://<app>.vercel.app
+DDL_AUTO=update
+SQL_INIT_MODE=always
+DB_POOL_SIZE=5
+JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=70 -XX:+UseSerialGC
 ```
+
+`PORT` lo inyecta Render; no lo setees. El seed corre en cada arranque y es idempotente.
+
+### Vercel
+
+- Root Directory: `frontend`.
+- `frontend/vercel.json` proxea `/api/:path*` a Render y hace fallback de SPA a `/index.html`.
+- Reemplazar `TU-APP.onrender.com` por la URL real de Render.
+- `environment.prod.ts` define `apiBase: ''`, así el frontend pega relativo a `/api`.
+
+### Orden de despliegue
+
+1. `docker compose up -d` y probar login local.
+2. Deploy del backend en Render y revisar logs de esquema/seed.
+3. Deploy del frontend en Vercel.
+4. Probar login, `GET /api/auth/me`, recargar una ruta protegida y logout.
 
 ## Gotcha importante: el IDE escribe en `target/classes`
 

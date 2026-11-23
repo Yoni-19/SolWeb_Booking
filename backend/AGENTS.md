@@ -10,8 +10,9 @@
 - **El build oficial es Maven.** `mvn` NO está en el PATH de esta máquina: usá el wrapper.
 - `.\mvnw.cmd clean compile` — build completo (39 fuentes).
 - `.\mvnw.cmd spring-boot:run` — levanta en `http://localhost:8080`.
-- `.\mvnw.cmd test` — tests. Requieren MySQL arriba (el test es un `@SpringBootTest`).
-- MySQL: `localhost:3306`, user `root`, pass `mysql`, base `db_complejoDeportivo`.
+- `.\mvnw.cmd test` — tests. Requieren PostgreSQL arriba (el test es un `@SpringBootTest`).
+- PostgreSQL local: `docker compose up -d` desde la raíz del repo. Queda en
+  `localhost:5433`, user `postgres`, pass `postgres`, base `db_complejoDeportivo`.
   El esquema y el seed (`src/main/resources/data.sql`) se crean solos.
 
 ### Trampa activa en Windows: `clean` con la app corriendo
@@ -66,7 +67,8 @@ los dos procesos se pelean por `target/`. Si `clean` falla por archivos bloquead
 - **Nunca serializar entidades**: todo sale por DTOs (`dto/`). `Usuario.clave` es el hash
   BCrypt y jamás debe viajar en una respuesta.
 - Errores: `@RestControllerAdvice` centralizado + `server.error.include-message=always`.
-- CORS: solo `http://localhost:4200` y `http://127.0.0.1:4200` (frontend Angular).
+- CORS: configurable con `CORS_ALLOWED_ORIGINS`; por defecto `http://localhost:4200` y
+  `http://127.0.0.1:4200`. En producción el proxy de Vercel evita CORS porque hay un solo origen.
 - Sin atributos de IA en comentarios ni commits. Commits en castellano, formato
   `tipo(ámbito): descripción` (`feat`, `fix`, `refactor`, `docs`, `chore`).
 - Java 25 disponible en `C:\Program Files\Eclipse Adoptium\jdk-25.0.1.8-hotspot`.
@@ -94,7 +96,8 @@ los dos procesos se pelean por `target/`. Si `clean` falla por archivos bloquead
 - `GET /api/usuarios` se filtra en el backend según quién consulta: `RECEPCIONISTA` recibe solo
   `CLIENTE` (no se ve a sí mismo ni al staff) y ni `?rol=` ni `?personal=true` pueden ampliar esa
   vista; `ADMIN` ve todos (salvo a sí mismo), puede filtrar con `?rol=` y pedir solo personal con
-  `?personal=true` (todo lo que no es `CLIENTE`). `GET /api/usuarios/{id}` aplica la misma regla.
+  `?personal=true` (todo lo que no es `CLIENTE`). `?q=` busca por nombres, apellidos o correo
+  respetando ese mismo alcance. `GET /api/usuarios/{id}` aplica la misma regla.
   El recepcionista puede crear clientes en `/clientes/nueva`; editar, eliminar, cambiar roles y
   gestionar personal sigue siendo exclusivo del `ADMIN`.
 - Matriz en `SecurityConfig`; permisos a nivel de fila (reserva ajena) en `ReservaService`.
@@ -118,7 +121,7 @@ los dos procesos se pelean por `target/`. Si `clean` falla por archivos bloquead
 
 ### Trampa: agregar una columna `NOT NULL` a una tabla con filas
 
-`@Enumerated(STRING)` + `nullable = false` deja `''` en las filas existentes y MySQL rechaza el
+`@Enumerated(STRING)` + `nullable = false` deja `''` en las filas existentes y PostgreSQL rechaza el
 `ALTER TABLE`. Por eso `Usuario.rol` usa
 `@Column(columnDefinition = "varchar(20) not null default 'CLIENTE'")`: Hibernate agrega la
 columna con default y las filas viejas quedan como `CLIENTE`. Si alguna vez hay que migrar una
@@ -128,6 +131,9 @@ base existente a mano: `UPDATE usuario SET rol = 'ADMIN' WHERE correo = 'admin@e
 
 - Solapamiento de reservas → `409 Conflict` (`ReservaRepository.existeSolapamiento`).
   `CANCELADA` no bloquea; al actualizar se excluye la propia reserva.
+- `GET /api/reservas/disponibilidad?canchaId=&fecha=yyyy-MM-dd` devuelve las franjas ocupadas de
+  esa cancha y día (mismos estados que bloquean, sin `CANCELADA`). La usan los tres roles para
+  que el formulario avise el choque antes del `409`.
 - Monto por **hora iniciada**: `horas = (minutos + 59) / 60`. No usar `Duration.toHours()`.
 - `PUT /api/usuarios/{id}` acepta clave opcional (`UsuarioUpdateRequest`): si viene `null`,
   la clave no cambia.
@@ -144,11 +150,16 @@ base existente a mano: `UPDATE usuario SET rol = 'ADMIN' WHERE correo = 'admin@e
 - **Reprogramar con pago**: se recalcula el total; si lo abonado supera el nuevo total, `409`;
   si no, se ajusta `estadoPago` a `PARCIAL`/`PAGADO`.
 
-### Migración de enums existentes
+### Enums en PostgreSQL
 
-Hibernate con `ddl-auto=update` no altera columnas `enum` ya creadas: agregar un valor nuevo al
-enum de Java no alcanza. Correr una vez `scripts/migrate-estados-pago.sql` en bases viejas
-(`EN_CURSO` en `reserva.estado_reserva`, `PARCIAL` en `pago.estado_pago`).
+En PostgreSQL los `@Enumerated(STRING)` se guardan como `varchar`, no como `ENUM` nativo.
+Hibernate **sí** genera un `CHECK` constraint con la lista de valores al crear la tabla, y
+`ddl-auto=update` **no lo modifica**. Por eso agregar un valor nuevo al enum de Java en una base
+ya creada requiere actualizar el constraint a mano; si no, el `UPDATE`/`INSERT` falla con un
+`409` engañoso ("existen registros relacionados"). Ejemplo:
+`scripts/migrate-estado-reserva-check.sql`. En una base nueva el constraint se crea con todos los
+valores actuales. El viejo script MySQL `scripts/migrate-estados-pago.sql` ya no existe ni hace
+falta.
 
 ## Contratos que el frontend NO puede cambiar
 

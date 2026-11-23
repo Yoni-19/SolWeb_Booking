@@ -5,7 +5,7 @@ Consume la API real del backend (`http://localhost:8080`): no hay datos en memor
 
 ## Requisitos
 
-- Node.js 20+ con npm
+- Node.js 22.12+ con npm
 - La API corriendo (`cd ../backend` → `.\mvnw.cmd spring-boot:run`)
 
 ## Cómo correr
@@ -24,12 +24,24 @@ hay dependencias de Vitest/Karma y no existe ningún `*.spec.ts`. `npm test` fal
 `Cannot determine project or target for command`. La verificación por ahora es `npm run build`
 más pruebas manuales contra la API.
 
+## Despliegue en Vercel
+
+- Root Directory: `frontend`.
+- `vercel.json` proxea `/api/:path*` a `https://TU-APP.onrender.com/api/:path*` y hace
+  fallback de las rutas SPA a `/index.html`.
+- Reemplazar `TU-APP.onrender.com` por la URL real de Render.
+- El build de producción usa `environment.prod.ts` (`apiBase: ''`): los services pegan relativo
+  a `/api` y el proxy de Vercel evita CORS, manteniendo la cookie `SameSite=Strict` como mismo
+  origen.
+- Verificar en DevTools que el `Set-Cookie` del login pase por el proxy y quede en el dominio de
+  Vercel.
+
 ## Estructura
 
 ```
 src/app/
 ├── core/          servicios, modelos, interceptores y guards compartidos
-│   ├── api.constants.ts     API_BASE (apunta a http://localhost:8080)
+│   ├── api.constants.ts     API_BASE (sale de src/environments/)
 │   ├── guards/              auth.guard (valida la sesión contra /api/auth/me) y role.guard
 │   ├── http/api-error.ts    traduce el envelope de error del backend a un mensaje
 │   ├── interceptors/        withCredentials + redirección central ante 401
