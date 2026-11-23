@@ -1,7 +1,7 @@
 -- Datos de prueba para paginacion: 30 reservas (3 paginas de 10).
 -- Usa solo IDs garantizados por el seed: usuarios 2 y 3 (CLIENTE), canchas 1-4.
--- INSERT IGNORE + IDs fijos: se puede re-ejecutar sin duplicar.
-INSERT IGNORE INTO reserva (id, fecha_hora_inicio, fecha_hora_fin, estado_reserva, monto_total, usuario_id, cancha_id) VALUES
+-- ON CONFLICT DO NOTHING + IDs fijos: se puede re-ejecutar sin duplicar.
+INSERT INTO reserva (id, fecha_hora_inicio, fecha_hora_fin, estado_reserva, monto_total, usuario_id, cancha_id) VALUES
   (1,  '2026-11-11 09:00:00', '2026-11-11 11:00:00', 'PENDIENTE',  140.00, 2, 1),
   (2,  '2026-11-11 11:00:00', '2026-11-11 13:00:00', 'CONFIRMADA', 150.00, 3, 2),
   (3,  '2026-11-11 15:00:00', '2026-11-11 17:00:00', 'PENDIENTE',  180.00, 2, 3),
@@ -31,4 +31,7 @@ INSERT IGNORE INTO reserva (id, fecha_hora_inicio, fecha_hora_fin, estado_reserv
   (27, '2026-11-19 15:00:00', '2026-11-19 17:00:00', 'PENDIENTE',  180.00, 2, 3),
   (28, '2026-11-20 09:00:00', '2026-11-20 11:00:00', 'CONFIRMADA', 120.00, 3, 4),
   (29, '2026-11-20 11:00:00', '2026-11-20 13:00:00', 'PENDIENTE',  140.00, 2, 1),
-  (30, '2026-11-20 15:00:00', '2026-11-20 17:00:00', 'PENDIENTE',  150.00, 3, 2);
+  (30, '2026-11-20 15:00:00', '2026-11-20 17:00:00', 'PENDIENTE',  150.00, 3, 2)
+ON CONFLICT DO NOTHING;
+
+SELECT setval(pg_get_serial_sequence('reserva', 'id'), COALESCE((SELECT MAX(id) FROM reserva), 1));
