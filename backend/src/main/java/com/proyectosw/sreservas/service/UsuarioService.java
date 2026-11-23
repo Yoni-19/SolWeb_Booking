@@ -36,7 +36,19 @@ public class UsuarioService {
      * por rol o pedir únicamente al personal con {@code personal=true}.
      */
     public Page<Usuario> listar(Pageable pageable, Rol filtro, Boolean personal, Rol rolSolicitante,
-            Integer idSolicitante) {
+            Integer idSolicitante, String q) {
+        String patron = (q == null || q.isBlank()) ? null : "%" + q.trim().toLowerCase() + "%";
+        if (patron != null) {
+            // La búsqueda respeta las mismas restricciones por rol que el listado.
+            if (Rol.RECEPCIONISTA.equals(rolSolicitante)) {
+                return repository.buscar(idSolicitante, Rol.CLIENTE, null, patron, pageable);
+            }
+            boolean soloPersonal = Boolean.TRUE.equals(personal);
+            return repository.buscar(idSolicitante,
+                    soloPersonal ? null : filtro,
+                    soloPersonal ? Rol.CLIENTE : null,
+                    patron, pageable);
+        }
         if (Rol.RECEPCIONISTA.equals(rolSolicitante)) {
             return repository.findByRol(Rol.CLIENTE, pageable);
         }

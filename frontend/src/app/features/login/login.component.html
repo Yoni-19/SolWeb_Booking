@@ -19,7 +19,22 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Contraseña</mat-label>
-        <input matInput type="password" formControlName="clave" autocomplete="current-password" />
+        <input
+          matInput
+          [type]="mostrarClave() ? 'text' : 'password'"
+          formControlName="clave"
+          autocomplete="current-password"
+        />
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          (click)="alternarClave()"
+          [attr.aria-label]="mostrarClave() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+          [attr.aria-pressed]="mostrarClave()"
+        >
+          <mat-icon>{{ mostrarClave() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
         @if (form.controls.clave.hasError('required')) {
           <mat-error>La contraseña es obligatoria</mat-error>
         }

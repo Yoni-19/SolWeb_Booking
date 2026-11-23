@@ -11,7 +11,13 @@
       <mat-spinner diameter="32" strokeWidth="3" />
     </div>
   } @else if (canchas().length === 0) {
-    <p class="cancha-vacio">No hay canchas registradas.</p>
+    <div class="cancha-vacio">
+      <p>Todavía no hay canchas registradas.</p>
+      <a mat-flat-button color="primary" routerLink="/canchas/nueva">
+        <mat-icon>add</mat-icon>
+        <span>Nueva cancha</span>
+      </a>
+    </div>
   }
 
   <div class="cancha-grid">
@@ -26,7 +32,7 @@
           </div>
           <h2>{{ cancha.nombre }}</h2>
           <p class="cancha-deporte">{{ cancha.deporte }}</p>
-          <p class="cancha-precio">{{ cancha.precioPorHora | number: '1.0-0' }} <small>/ hora</small></p>
+          <p class="cancha-precio">{{ cancha.precioPorHora | currency: 'ARS' : 'symbol' : '1.0-0' }} <small>/ hora</small></p>
           <div class="cancha-actions">
             <a mat-button [routerLink]="['/canchas', cancha.id, 'editar']">
               <mat-icon>edit</mat-icon>

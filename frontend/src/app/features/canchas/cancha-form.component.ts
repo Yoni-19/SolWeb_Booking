@@ -34,6 +34,8 @@ export class CanchaFormComponent {
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   private editingId: number | null = null;
+  /** True once the form was saved, so the unsaved-changes guard lets it leave. */
+  private guardado = false;
 
   readonly form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
@@ -67,6 +69,11 @@ export class CanchaFormComponent {
     }
   }
 
+  /** Used by unsavedChangesGuard. */
+  tieneCambiosSinGuardar(): boolean {
+    return this.form.dirty && !this.guardado;
+  }
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -84,6 +91,7 @@ export class CanchaFormComponent {
     request$.subscribe({
       next: () => {
         this.loading.set(false);
+        this.guardado = true;
         this.snackBar.open('Cancha guardada.', 'Cerrar', { duration: 3000 });
         this.router.navigate(['/canchas']);
       },

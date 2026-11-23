@@ -26,6 +26,7 @@ export class LoginComponent {
 
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly mostrarClave = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     correo: ['', [Validators.required, Validators.email]],
@@ -36,6 +37,10 @@ export class LoginComponent {
     if (this.route.snapshot.queryParams['registrado'] === '1') {
       this.snackBar.open('Cuenta creada. Ya puedes iniciar sesión.', 'Cerrar', { duration: 4000 });
     }
+  }
+
+  alternarClave(): void {
+    this.mostrarClave.update((visible) => !visible);
   }
 
   submit(): void {

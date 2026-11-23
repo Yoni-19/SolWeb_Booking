@@ -19,11 +19,21 @@ export class PersonalService {
   private readonly http = inject(HttpClient);
   private readonly url = `${API_BASE}/api/usuarios`;
 
-  /** GET /api/usuarios?personal=true — solo ADMIN; devuelve todo lo que no es CLIENTE. */
-  list(page = 0, size = 10): Observable<Pagina<Cliente>> {
-    return this.http.get<Pagina<Cliente>>(this.url, {
-      params: { page, size, sort: 'id,desc', personal: 'true' },
-    });
+  /**
+   * GET /api/usuarios?personal=true&q= — solo ADMIN; devuelve todo lo que no es
+   * CLIENTE. `q` busca por nombres, apellidos o correo en el backend.
+   */
+  list(page = 0, size = 10, q?: string): Observable<Pagina<Cliente>> {
+    const params: Record<string, string | number> = {
+      page,
+      size,
+      sort: 'id,desc',
+      personal: 'true',
+    };
+    if (q) {
+      params['q'] = q;
+    }
+    return this.http.get<Pagina<Cliente>>(this.url, { params });
   }
 
   get(id: number): Observable<Cliente | undefined> {

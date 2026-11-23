@@ -1,4 +1,4 @@
-import { DecimalPipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -32,7 +32,7 @@ export interface PagoDialogData {
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
-    DecimalPipe,
+    CurrencyPipe,
   ],
   templateUrl: './pago-dialog.component.html',
   styleUrl: './pago-dialog.component.scss',

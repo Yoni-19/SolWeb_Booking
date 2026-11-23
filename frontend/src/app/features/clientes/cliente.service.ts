@@ -15,14 +15,18 @@ export class ClienteService {
   private readonly url = `${API_BASE}/api/usuarios`;
 
   /**
-   * GET /api/usuarios?page=&size=&rol= — server-side pagination.
+   * GET /api/usuarios?page=&size=&rol=&q= — server-side pagination.
    * The backend scopes the response by role: an ADMIN sees everyone and may
    * filter with `rol`; a RECEPCIONISTA always receives only CLIENTE users.
+   * `q` searches by names, last names or email (also server-side).
    */
-  list(page = 0, size = 10, rol?: Rol): Observable<Pagina<Cliente>> {
+  list(page = 0, size = 10, rol?: Rol, q?: string): Observable<Pagina<Cliente>> {
     const params: Record<string, string | number> = { page, size, sort: 'id,desc' };
     if (rol) {
       params['rol'] = rol;
+    }
+    if (q) {
+      params['q'] = q;
     }
     return this.http.get<Pagina<Cliente>>(this.url, { params });
   }

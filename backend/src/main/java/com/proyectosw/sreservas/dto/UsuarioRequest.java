@@ -21,7 +21,7 @@ public record UsuarioRequest(
         String correo,
 
         @NotBlank(message = "La clave es obligatoria")
-        @Size(min = 2, max = 100)
+        @Size(min = 8, max = 100, message = "La clave debe tener al menos 8 caracteres")
         String clave
 ) {
     public Usuario toEntity() {

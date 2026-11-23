@@ -9,15 +9,15 @@
     <dl class="montos">
       <div>
         <dt>Total</dt>
-        <dd>{{ data.reserva.montoTotal | number: '1.2-2' }}</dd>
+        <dd>{{ data.reserva.montoTotal | currency: 'ARS' : 'symbol' : '1.2-2' }}</dd>
       </div>
       <div>
         <dt>Pagado</dt>
-        <dd>{{ data.reserva.montoPagado | number: '1.2-2' }}</dd>
+        <dd>{{ data.reserva.montoPagado | currency: 'ARS' : 'symbol' : '1.2-2' }}</dd>
       </div>
       <div>
         <dt>Saldo</dt>
-        <dd>{{ saldo | number: '1.2-2' }}</dd>
+        <dd>{{ saldo | currency: 'ARS' : 'symbol' : '1.2-2' }}</dd>
       </div>
     </dl>
 
@@ -26,9 +26,9 @@
       <span matTextPrefix>$&nbsp;</span>
       <input matInput type="number" formControlName="monto" min="0.01" [max]="saldo" step="0.01" />
       @if (esPrimerPago) {
-        <mat-hint>Primer pago: mínimo la seña del 50% ({{ senia | number: '1.2-2' }})</mat-hint>
+        <mat-hint>Primer pago: mínimo la seña del 50% ({{ senia | currency: 'ARS' : 'symbol' : '1.2-2' }})</mat-hint>
       } @else {
-        <mat-hint>Saldo pendiente: {{ saldo | number: '1.2-2' }}</mat-hint>
+        <mat-hint>Saldo pendiente: {{ saldo | currency: 'ARS' : 'symbol' : '1.2-2' }}</mat-hint>
       }
       @if (form.controls.monto.hasError('min')) {
         <mat-error>El monto debe ser mayor a cero</mat-error>

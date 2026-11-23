@@ -48,14 +48,15 @@
           </mat-form-field>
         }
 
-        <mat-form-field appearance="outline" [class.full-width]="isEdit()">
+        <mat-form-field appearance="outline" [class.full-width]="isEdit()" subscriptSizing="dynamic">
           <mat-label>{{ isEdit() ? 'Nueva contraseña (opcional)' : 'Contraseña' }}</mat-label>
           <input matInput type="password" formControlName="clave" autocomplete="new-password" />
           @if (form.controls.clave.hasError('required')) {
             <mat-error>La contraseña es obligatoria</mat-error>
           } @else if (form.controls.clave.hasError('minlength')) {
-            <mat-error>Mínimo 2 caracteres</mat-error>
+            <mat-error>Mínimo 8 caracteres</mat-error>
           }
+          <mat-hint>Al menos 8 caracteres</mat-hint>
         </mat-form-field>
 
         @if (errorMessage()) {

@@ -39,12 +39,14 @@ export class PersonalFormComponent {
   private editingId: number | null = null;
   /** Evita guardar si por URL se abrió un usuario que no es del personal. */
   private usuarioInvalido = false;
+  /** True once the form was saved, so the unsaved-changes guard lets it leave. */
+  private guardado = false;
 
   readonly form = this.fb.nonNullable.group({
     nombres: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
     apellidos: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
     correo: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
-    clave: ['', [Validators.minLength(2), Validators.maxLength(100)]],
+    clave: ['', [Validators.minLength(8), Validators.maxLength(100)]],
     rol: ['RECEPCIONISTA' as RolPersonal, Validators.required],
   });
 
@@ -80,11 +82,16 @@ export class PersonalFormComponent {
       // El alta de personal exige clave; en edición es opcional.
       this.form.controls.clave.setValidators([
         Validators.required,
-        Validators.minLength(2),
+        Validators.minLength(8),
         Validators.maxLength(100),
       ]);
       this.form.controls.clave.updateValueAndValidity();
     }
+  }
+
+  /** Used by unsavedChangesGuard. */
+  tieneCambiosSinGuardar(): boolean {
+    return this.form.dirty && !this.guardado;
   }
 
   submit(): void {
@@ -105,6 +112,7 @@ export class PersonalFormComponent {
     request$.subscribe({
       next: () => {
         this.loading.set(false);
+        this.guardado = true;
         this.snackBar.open('Personal guardado.', 'Cerrar', { duration: 3000 });
         this.router.navigate(['/personal']);
       },

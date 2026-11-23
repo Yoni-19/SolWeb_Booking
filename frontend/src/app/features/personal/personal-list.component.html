@@ -6,12 +6,28 @@
     </a>
   </app-page-header>
 
+  <div class="buscador">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Buscar trabajador</mat-label>
+      <input matInput [formControl]="busqueda" placeholder="Nombre, apellido o correo" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+  </div>
+
   @if (loading()) {
     <div class="personal-estado-carga">
       <mat-spinner diameter="32" strokeWidth="3" />
     </div>
   } @else if (personal().length === 0) {
-    <p class="personal-vacio">No hay personal registrado.</p>
+    <div class="personal-vacio">
+      <p>{{ busqueda.value.trim() ? 'No se encontró personal con esa búsqueda.' : 'Todavía no hay personal registrado.' }}</p>
+      @if (!busqueda.value.trim()) {
+        <a mat-flat-button color="primary" routerLink="/personal/nueva">
+          <mat-icon>add</mat-icon>
+          <span>Nuevo trabajador</span>
+        </a>
+      }
+    </div>
   }
 
   <div class="table-wrap">
@@ -51,11 +67,17 @@
       <ng-container matColumnDef="acciones">
         <th mat-header-cell *matHeaderCellDef>Acciones</th>
         <td mat-cell *matCellDef="let u">
-          <a mat-icon-button [routerLink]="['/personal', u.id, 'editar']" aria-label="Editar">
+          <a mat-icon-button [routerLink]="['/personal', u.id, 'editar']" aria-label="Editar" matTooltip="Editar trabajador">
             <mat-icon>edit</mat-icon>
           </a>
           @if (u.rol !== 'ADMIN') {
-            <button mat-icon-button (click)="eliminar(u)" aria-label="Eliminar">
+            <button
+              mat-icon-button
+              (click)="eliminar(u)"
+              aria-label="Eliminar"
+              matTooltip="Eliminar trabajador"
+              [disabled]="eliminando() === u.id"
+            >
               <mat-icon>delete</mat-icon>
             </button>
           }
@@ -67,12 +89,14 @@
     </table>
   </div>
 
-  <mat-paginator
-    [length]="total()"
-    [pageIndex]="pageIndex()"
-    [pageSize]="pageSize()"
-    [pageSizeOptions]="[5, 10, 25, 50]"
-    (page)="cambiarPagina($event)"
-    aria-label="Paginación de personal"
-  />
+  @if (total() > 0) {
+    <mat-paginator
+      [length]="total()"
+      [pageIndex]="pageIndex()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="[5, 10, 25, 50]"
+      (page)="cambiarPagina($event)"
+      aria-label="Paginación de personal"
+    />
+  }
 </section>

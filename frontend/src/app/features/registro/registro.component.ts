@@ -30,17 +30,27 @@ export class RegistroComponent {
 
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly mostrarClave = signal(false);
+  readonly mostrarRepeticion = signal(false);
 
   readonly form = this.fb.nonNullable.group(
     {
       nombres: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
       apellidos: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
       correo: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
-      clave: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+      clave: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(100)]],
       repetirClave: ['', Validators.required],
     },
     { validators: clavesIguales },
   );
+
+  alternarClave(): void {
+    this.mostrarClave.update((visible) => !visible);
+  }
+
+  alternarRepeticion(): void {
+    this.mostrarRepeticion.update((visible) => !visible);
+  }
 
   submit(): void {
     if (this.form.invalid) {

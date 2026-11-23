@@ -42,9 +42,9 @@
             @if (form.controls.clave.hasError('required')) {
               <mat-error>La contraseña es obligatoria</mat-error>
             } @else if (form.controls.clave.hasError('minlength')) {
-              <mat-error>Mínimo 2 caracteres</mat-error>
+              <mat-error>Mínimo 8 caracteres</mat-error>
             }
-            <mat-hint>Es la contraseña con la que el cliente inicia sesión</mat-hint>
+            <mat-hint>Al menos 8 caracteres. Es la clave con la que inicia sesión.</mat-hint>
           </mat-form-field>
         }
 

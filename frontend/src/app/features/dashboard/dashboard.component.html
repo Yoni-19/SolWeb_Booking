@@ -4,6 +4,11 @@
     [subtitle]="'Bienvenido, ' + (nombre() || 'invitado')"
   />
 
+  @if (loading()) {
+    <div class="dashboard-carga">
+      <mat-spinner diameter="40" strokeWidth="3" />
+    </div>
+  } @else {
   <div class="stat-grid">
     <mat-card class="stat-card">
       <mat-card-content>
@@ -85,4 +90,5 @@
       }
     }
   </div>
+  }
 </section>

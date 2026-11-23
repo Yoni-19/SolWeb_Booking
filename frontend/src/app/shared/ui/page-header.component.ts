@@ -7,7 +7,7 @@ import { Component, input } from '@angular/core';
   template: `
     <div class="page-header">
       <div>
-        <h1>{{ title() }}</h1>
+        <h1 tabindex="-1">{{ title() }}</h1>
         @if (subtitle()) {
           <p>{{ subtitle() }}</p>
         }
@@ -27,6 +27,7 @@ import { Component, input } from '@angular/core';
       margin-bottom: 24px;
     }
     h1 { font-size: 1.5rem; margin: 0; }
+    h1:focus { outline: none; }
     p { margin: 4px 0 0; opacity: 0.7; font-size: 0.9rem; }
     .page-header-actions { display: flex; gap: 8px; }
   `,

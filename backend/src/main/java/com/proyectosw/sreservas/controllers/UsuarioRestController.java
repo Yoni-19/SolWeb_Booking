@@ -48,14 +48,16 @@ public class UsuarioRestController {
     @Operation(summary = "Lista los usuarios paginados",
             description = "Un ADMIN ve clientes y trabajadores (sin su propio usuario) y puede filtrar con "
                     + "el query param rol o pedir solo personal con personal=true; un RECEPCIONISTA solo "
-                    + "recibe CLIENTES. Otros params: page (base 0), size y sort.")
+                    + "recibe CLIENTES. q busca por nombres, apellidos o correo. "
+                    + "Otros params: page (base 0), size y sort.")
     public ResponseEntity<Page<UsuarioResponse>> listarTodos(
             @RequestParam(name = "rol", required = false) Rol rol,
             @RequestParam(name = "personal", required = false) Boolean personal,
+            @RequestParam(name = "q", required = false) String q,
             @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
         Usuario actual = currentUser.get();
         Rol rolActual = actual.getRol() != null ? actual.getRol() : Rol.CLIENTE;
-        Page<UsuarioResponse> pagina = service.listar(pageable, rol, personal, rolActual, actual.getId())
+        Page<UsuarioResponse> pagina = service.listar(pageable, rol, personal, rolActual, actual.getId(), q)
                 .map(UsuarioResponse::toResponse);
         return ResponseEntity.ok(pagina);
     }
