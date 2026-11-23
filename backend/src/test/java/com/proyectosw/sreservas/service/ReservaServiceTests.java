@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -57,11 +58,10 @@ class ReservaServiceTests {
     @Test
     void elClienteSoloListaSusPropiasReservas() {
         when(currentUser.get()).thenReturn(usuario(2, Rol.CLIENTE));
-        when(repository.findByUsuario_IdAndEstadoReservaNot(
-                eq(2), eq(EstadoReserva.CANCELADA), any(Pageable.class)))
+        when(repository.buscar(eq(2), any(), eq(false), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(reservaDe(2))));
 
-        Page<Reserva> reservas = service.listarTodos(PageRequest.of(0, 10), null);
+        Page<Reserva> reservas = service.listarTodos(PageRequest.of(0, 10), null, null);
 
         assertThat(reservas.getContent()).hasSize(1);
         verify(repository, never()).findAll(any(Pageable.class));
@@ -71,20 +71,20 @@ class ReservaServiceTests {
     @Test
     void elRecepcionistaListaTodasLasReservas() {
         when(currentUser.get()).thenReturn(usuario(9, Rol.RECEPCIONISTA));
-        when(repository.findAll(any(Pageable.class)))
+        when(repository.buscar(any(), any(), eq(true), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(reservaDe(2), reservaDe(3))));
 
-        assertThat(service.listarTodos(PageRequest.of(0, 10), null).getContent()).hasSize(2);
+        assertThat(service.listarTodos(PageRequest.of(0, 10), null, null).getContent()).hasSize(2);
         verify(repository, never()).findByUsuario_Id(anyInt(), any(Pageable.class));
     }
 
     @Test
     void elFiltroPorEstadoSeResuelveEnLaConsulta() {
         when(currentUser.get()).thenReturn(usuario(9, Rol.ADMIN));
-        when(repository.findByEstadoReserva(eq(EstadoReserva.PENDIENTE), any(Pageable.class)))
+        when(repository.buscar(any(), eq(EstadoReserva.PENDIENTE), eq(true), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(reservaDe(2))));
 
-        Page<Reserva> pagina = service.listarTodos(PageRequest.of(0, 10), EstadoReserva.PENDIENTE);
+        Page<Reserva> pagina = service.listarTodos(PageRequest.of(0, 10), EstadoReserva.PENDIENTE, null);
 
         assertThat(pagina.getTotalElements()).isEqualTo(1);
         verify(repository, never()).findAll(any(Pageable.class));
@@ -180,6 +180,9 @@ class ReservaServiceTests {
         when(currentUser.get()).thenReturn(usuario(9, Rol.ADMIN));
         Reserva confirmada = reservaDe(2);
         confirmada.setEstadoReserva(EstadoReserva.CONFIRMADA);
+        // El check-in exige el mismo dia; el pago faltante se valida despues.
+        confirmada.setFechaHoraInicio(LocalDate.now().atStartOfDay());
+        confirmada.setFechaHoraFin(LocalDate.now().atTime(23, 59, 59));
         when(repository.findById(5)).thenReturn(Optional.of(confirmada));
         when(pagoRepository.findByReserva_Id(5)).thenReturn(Optional.empty());
 
@@ -239,6 +242,16 @@ class ReservaServiceTests {
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
                 .isEqualTo(HttpStatus.CONFLICT);
         verify(repository, never()).save(any(Reserva.class));
+    }
+
+    @Test
+    void laDisponibilidadConsultaElDiaCompleto() {
+        LocalDate fecha = LocalDate.of(2030, 12, 1);
+        when(repository.buscarOcupadas(eq(1), any(), eq(fecha.atStartOfDay()),
+                eq(fecha.plusDays(1).atStartOfDay())))
+                .thenReturn(List.of(reservaDe(2)));
+
+        assertThat(service.listarOcupadas(1, fecha)).hasSize(1);
     }
 
     private Usuario usuario(Integer id, Rol rol) {

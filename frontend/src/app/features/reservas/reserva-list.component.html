@@ -1,9 +1,19 @@
 <section class="page">
-  <app-page-header title="Reservas" subtitle="Listado de reservas del complejo">
-    <a mat-flat-button color="primary" routerLink="/reservas/nueva">
-      <mat-icon>add</mat-icon>
-      <span>Nueva reserva</span>
-    </a>
+  <app-page-header
+    [title]="esAdmin() ? 'Historial de reservas' : 'Reservas'"
+    [subtitle]="esAdmin() ? 'Consulta de solo lectura: el ADMIN no opera reservas' : 'Listado de reservas del complejo'"
+  >
+    @if (esAdmin()) {
+      <button mat-stroked-button type="button" (click)="descargarPdf()">
+        <mat-icon>picture_as_pdf</mat-icon>
+        <span>Descargar PDF</span>
+      </button>
+    } @else {
+      <a mat-flat-button color="primary" routerLink="/reservas/nueva">
+        <mat-icon>add</mat-icon>
+        <span>Nueva reserva</span>
+      </a>
+    }
   </app-page-header>
 
   @if (esCliente()) {
@@ -13,58 +23,85 @@
     </p>
   }
 
+  <div class="filtros">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Filtrar por estado</mat-label>
+      <mat-select [value]="filtroEstado()" (selectionChange)="cambiarFiltro($event.value)">
+        <mat-option value="">Todos</mat-option>
+        @for (estado of estados; track estado) {
+          <mat-option [value]="estado">{{ etiquetaEstado(estado) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Filtrar por fecha</mat-label>
+      <input matInput [matDatepicker]="fechaPicker" [formControl]="filtroFecha" />
+      <mat-datepicker-toggle matIconSuffix [for]="fechaPicker" />
+      <mat-datepicker #fechaPicker />
+    </mat-form-field>
+
+    @if (hayFiltros()) {
+      <button mat-button type="button" (click)="limpiarFiltros()">
+        <mat-icon>clear</mat-icon>
+        <span>Limpiar</span>
+      </button>
+    }
+  </div>
+
   @if (loading()) {
     <div class="reserva-estado-carga">
       <mat-spinner diameter="32" strokeWidth="3" />
     </div>
   } @else if (reservas().length === 0) {
-    <p class="reserva-vacio">No hay reservas registradas.</p>
-  }
-
-  <div class="table-wrap">
-    <table mat-table [dataSource]="reservas()" class="reserva-table">
+    <div class="reserva-vacio">
+      <p>{{ hayFiltros() ? 'No hay reservas con esos filtros.' : 'Todavía no hay reservas' }}</p>
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table mat-table [dataSource]="reservas()" class="reserva-table">
       <ng-container matColumnDef="id">
         <th mat-header-cell *matHeaderCellDef>#</th>
-        <td mat-cell *matCellDef="let r">{{ r.id }}</td>
+        <td mat-cell *matCellDef="let r" data-label="#">{{ r.id }}</td>
       </ng-container>
 
       <ng-container matColumnDef="cancha">
         <th mat-header-cell *matHeaderCellDef>Cancha</th>
-        <td mat-cell *matCellDef="let r">{{ r.canchaNombre }}</td>
+        <td mat-cell *matCellDef="let r" data-label="Cancha">{{ r.canchaNombre }}</td>
       </ng-container>
 
       <ng-container matColumnDef="cliente">
         <th mat-header-cell *matHeaderCellDef>Cliente</th>
-        <td mat-cell *matCellDef="let r">{{ r.usuarioNombre }}</td>
+        <td mat-cell *matCellDef="let r" data-label="Cliente">{{ r.usuarioNombre }}</td>
       </ng-container>
 
       <ng-container matColumnDef="inicio">
         <th mat-header-cell *matHeaderCellDef>Inicio / Fin</th>
-        <td mat-cell *matCellDef="let r">
+        <td mat-cell *matCellDef="let r" data-label="Inicio / Fin">
           {{ r.fechaHoraInicio | date: 'dd/MM/yy HH:mm' }} — {{ r.fechaHoraFin | date: 'HH:mm' }}
         </td>
       </ng-container>
 
       <ng-container matColumnDef="total">
         <th mat-header-cell *matHeaderCellDef>Total</th>
-        <td mat-cell *matCellDef="let r">{{ r.montoTotal | number: '1.2-2' }}</td>
+        <td mat-cell *matCellDef="let r" data-label="Total">{{ r.montoTotal | currency: 'ARS' : 'symbol' : '1.2-2' }}</td>
       </ng-container>
 
       <ng-container matColumnDef="pagado">
         <th mat-header-cell *matHeaderCellDef>Pagado</th>
-        <td mat-cell *matCellDef="let r">{{ r.montoPagado | number: '1.2-2' }}</td>
+        <td mat-cell *matCellDef="let r" data-label="Pagado">{{ r.montoPagado | currency: 'ARS' : 'symbol' : '1.2-2' }}</td>
       </ng-container>
 
       <ng-container matColumnDef="saldo">
         <th mat-header-cell *matHeaderCellDef>Saldo</th>
-        <td mat-cell *matCellDef="let r" [class.saldo-pendiente]="r.saldo > 0">
-          {{ r.saldo | number: '1.2-2' }}
+        <td mat-cell *matCellDef="let r" data-label="Saldo" [class.saldo-pendiente]="r.saldo > 0">
+          {{ r.saldo | currency: 'ARS' : 'symbol' : '1.2-2' }}
         </td>
       </ng-container>
 
       <ng-container matColumnDef="pago">
         <th mat-header-cell *matHeaderCellDef>Pago</th>
-        <td mat-cell *matCellDef="let r">
+        <td mat-cell *matCellDef="let r" data-label="Pago">
           <span class="pago-chip" [class]="'pago-' + (r.estadoPago ?? 'sin_pago').toLowerCase()">
             {{ etiquetaPago(r) }}
           </span>
@@ -73,22 +110,22 @@
 
       <ng-container matColumnDef="estado">
         <th mat-header-cell *matHeaderCellDef>Estado</th>
-        <td mat-cell *matCellDef="let r">
+        <td mat-cell *matCellDef="let r" data-label="Estado">
           <span class="estado-chip" [class]="'estado-' + r.estadoReserva.toLowerCase()">
-            {{ r.estadoReserva }}
+            {{ etiquetaEstado(r.estadoReserva) }}
           </span>
         </td>
       </ng-container>
 
       <ng-container matColumnDef="acciones">
         <th mat-header-cell *matHeaderCellDef>Acciones</th>
-        <td mat-cell *matCellDef="let r" class="acciones">
+        <td mat-cell *matCellDef="let r" class="acciones" data-label="Acciones">
           @if (puedePagar(r)) {
             <button mat-flat-button color="primary" class="accion-pago" (click)="pagarSenia(r)">
-              Seña {{ senia(r) | number: '1.2-2' }}
+              Seña {{ senia(r) | currency: 'ARS' : 'symbol' : '1.2-2' }}
             </button>
             <button mat-button (click)="pagarTotal(r)">
-              Total {{ r.montoTotal | number: '1.2-2' }}
+              Total {{ r.montoTotal | currency: 'ARS' : 'symbol' : '1.2-2' }}
             </button>
           }
           @if (puedeCobrar(r)) {
@@ -102,6 +139,12 @@
               <mat-icon>login</mat-icon>
               <span>Iniciar</span>
             </button>
+          } @else if (iniciarDeshabilitado(r)) {
+            <button mat-button disabled matTooltip="Disponible el día de la reserva">
+              <mat-icon>login</mat-icon>
+              <span>Iniciar</span>
+            </button>
+            <span class="accion-aviso">Disponible el día de la reserva</span>
           }
           @if (puedeFinalizar(r)) {
             <button mat-button (click)="finalizar(r)">
@@ -110,12 +153,12 @@
             </button>
           }
           @if (puedeEditar(r)) {
-            <a mat-icon-button [routerLink]="['/reservas', r.id, 'editar']" aria-label="Editar reserva">
+            <a mat-icon-button [routerLink]="['/reservas', r.id, 'editar']" aria-label="Editar reserva" matTooltip="Reprogramar reserva">
               <mat-icon>edit</mat-icon>
             </a>
           }
           @if (puedeEditar(r)) {
-            <button mat-icon-button (click)="cancelar(r)" aria-label="Cancelar reserva">
+            <button mat-icon-button (click)="cancelar(r)" aria-label="Cancelar reserva" matTooltip="Cancelar reserva">
               <mat-icon>cancel</mat-icon>
             </button>
           }
@@ -128,12 +171,15 @@
     </table>
   </div>
 
-  <mat-paginator
-    [length]="total()"
-    [pageIndex]="pageIndex()"
-    [pageSize]="pageSize()"
-    [pageSizeOptions]="[5, 10, 25, 50]"
-    (page)="cambiarPagina($event)"
-    aria-label="Paginación de reservas"
-  />
+    @if (total() > 0) {
+      <mat-paginator
+        [length]="total()"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="[5, 10, 25, 50]"
+        (page)="cambiarPagina($event)"
+        aria-label="Paginación de reservas"
+      />
+    }
+  }
 </section>

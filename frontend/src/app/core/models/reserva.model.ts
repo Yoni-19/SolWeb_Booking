@@ -1,7 +1,7 @@
 import type { EstadoPago } from './pago.model';
 
 /** Matches backend EstadoReserva enum (model/enums/EstadoReserva.java). */
-export type EstadoReserva = 'PENDIENTE' | 'CONFIRMADA' | 'EN_CURSO' | 'CANCELADA' | 'COMPLETADA';
+export type EstadoReserva = 'PENDIENTE' | 'CONFIRMADA' | 'EN_CURSO' | 'CANCELADA' | 'COMPLETADA' | 'NO_ASISTIO';
 
 export const ESTADOS_RESERVA: EstadoReserva[] = [
   'PENDIENTE',
@@ -9,7 +9,25 @@ export const ESTADOS_RESERVA: EstadoReserva[] = [
   'EN_CURSO',
   'CANCELADA',
   'COMPLETADA',
+  'NO_ASISTIO',
 ];
+
+/** Human-readable labels for the state chips and the filter. */
+export const ESTADO_RESERVA_LABEL: Record<EstadoReserva, string> = {
+  PENDIENTE: 'Pendiente',
+  CONFIRMADA: 'Confirmada',
+  EN_CURSO: 'En curso',
+  CANCELADA: 'Cancelada',
+  COMPLETADA: 'Completada',
+  NO_ASISTIO: 'No asistió',
+};
+
+/** Taken slot returned by GET /api/reservas/disponibilidad (backend FranjaOcupadaResponse). */
+export interface FranjaOcupada {
+  id: number;
+  inicio: string;
+  fin: string;
+}
 
 /** Matches backend ReservaResponse DTO (nested entities flattened to id + name). */
 export interface Reserva {

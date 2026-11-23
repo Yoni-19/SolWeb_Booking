@@ -36,7 +36,7 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Fecha</mat-label>
-          <input matInput [matDatepicker]="picker" formControlName="fecha" />
+          <input matInput [matDatepicker]="picker" formControlName="fecha" [min]="minFecha" />
           <mat-datepicker-toggle matIconSuffix [for]="picker" />
           <mat-datepicker #picker />
           @if (form.controls.fecha.hasError('required')) {
@@ -47,17 +47,62 @@
         <div class="time-row">
           <mat-form-field appearance="outline">
             <mat-label>Hora inicio</mat-label>
-            <input matInput type="time" formControlName="horaInicio" />
+            <input matInput type="time" formControlName="horaInicio" min="08:00" max="22:00" />
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Hora fin</mat-label>
-            <input matInput type="time" formControlName="horaFin" />
+            <input matInput type="time" formControlName="horaFin" min="08:00" max="22:00" />
             @if (form.controls.horaFin.hasError('required')) {
               <mat-error>Obligatoria</mat-error>
             }
           </mat-form-field>
         </div>
+
+        @if (resumen(); as r) {
+          <div class="full-width resumen-reserva">
+            <mat-icon>calculate</mat-icon>
+            <span>{{ r.horas }} h × {{ r.precioHora | currency: 'ARS' : 'symbol' : '1.2-2' }}</span>
+            <strong>Total estimado: {{ r.total | currency: 'ARS' : 'symbol' : '1.2-2' }}</strong>
+            <span class="resumen-senia">Seña 50%: {{ r.senia | currency: 'ARS' : 'symbol' : '1.2-2' }}</span>
+          </div>
+        }
+
+        @if (form.controls.canchaId.value !== null && form.controls.fecha.value !== null) {
+          <div class="full-width disponibilidad">
+            <div class="disponibilidad-titulo">
+              <mat-icon>schedule</mat-icon>
+              <span>Disponibilidad (08:00 a 22:00)</span>
+            </div>
+            @if (cargandoDisponibilidad()) {
+              <span class="disponibilidad-vacio">Consultando…</span>
+            } @else {
+              <div class="grilla-horaria">
+                @for (slot of slots(); track slot.hora) {
+                  <button
+                    type="button"
+                    class="slot"
+                    [class.slot-ocupado]="slot.ocupado"
+                    [class.slot-seleccionado]="slot.seleccionado"
+                    [disabled]="slot.ocupado"
+                    [matTooltip]="slot.ocupado ? 'Ocupado' : 'Libre de ' + slot.hora + ' a ' + slot.fin"
+                    (click)="elegirSlot(slot)"
+                  >
+                    <span class="slot-hora">{{ slot.hora }}</span>
+                    <span class="slot-estado">{{ slot.ocupado ? 'Ocupado' : 'Libre' }}</span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        @if (conflicto()) {
+          <div class="full-width form-error" role="alert">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ conflicto() }}</span>
+          </div>
+        }
 
         @if (!isEdit()) {
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -89,7 +134,7 @@
         @if (isEdit() && auth.esStaff()) {
           <mat-form-field appearance="outline">
             <mat-label>Estado</mat-label>
-            <input matInput [value]="estadoActual() ?? 'PENDIENTE'" readonly />
+            <input matInput [value]="etiquetaEstado(estadoActual())" readonly />
           </mat-form-field>
         }
 

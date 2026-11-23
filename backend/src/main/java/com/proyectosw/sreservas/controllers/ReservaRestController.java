@@ -1,11 +1,14 @@
 package com.proyectosw.sreservas.controllers;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.proyectosw.sreservas.dto.FranjaOcupadaResponse;
 import com.proyectosw.sreservas.dto.ReservaEstadoRequest;
 import com.proyectosw.sreservas.dto.ReservaRequest;
 import com.proyectosw.sreservas.dto.ReservaResponse;
@@ -48,16 +52,29 @@ public class ReservaRestController {
     @GetMapping
     @Operation(summary = "Lista las reservas paginadas",
             description = "ADMIN y RECEPCIONISTA ven todas; un CLIENTE solo las propias. "
-                    + "Query params: page (base 0), size, sort y estado (opcional).")
+                    + "Query params: page (base 0), size, sort, estado y fecha (yyyy-MM-dd), opcionales.")
     public ResponseEntity<Page<ReservaResponse>> listarTodos(
             @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
-            @RequestParam(required = false) EstadoReserva estado) {
-        Page<Reserva> reservas = service.listarTodos(pageable, estado);
+            @RequestParam(required = false) EstadoReserva estado,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        Page<Reserva> reservas = service.listarTodos(pageable, estado, fecha);
         Map<Integer, Pago> pagos = pagoService.buscarPorReservas(
                 reservas.getContent().stream().map(Reserva::getId).toList());
         Page<ReservaResponse> pagina = reservas.map(
                 reserva -> ReservaResponse.toResponse(reserva, pagos.get(reserva.getId())));
         return ResponseEntity.ok(pagina);
+    }
+
+    @GetMapping ("/disponibilidad")
+    @Operation(summary = "Franjas ocupadas de una cancha en un dia",
+            description = "Sirve al formulario de reserva para avisar los horarios tomados. "
+                    + "Query params: canchaId (obligatorio) y fecha en formato yyyy-MM-dd.")
+    public ResponseEntity<List<FranjaOcupadaResponse>> disponibilidad(
+            @RequestParam("canchaId") Integer canchaId,
+            @RequestParam("fecha") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        return ResponseEntity.ok(service.listarOcupadas(canchaId, fecha).stream()
+                .map(FranjaOcupadaResponse::toResponse)
+                .toList());
     }
 
     @GetMapping ("/{id}")

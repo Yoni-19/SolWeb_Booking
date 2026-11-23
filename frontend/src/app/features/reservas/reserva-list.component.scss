@@ -4,6 +4,19 @@
   border-radius: 12px;
 }
 
+.filtros {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  mat-form-field {
+    width: 220px;
+  }
+}
+
 .reserva-table {
   width: 100%;
 
@@ -23,9 +36,17 @@
 }
 
 .reserva-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   padding: 32px 0;
   text-align: center;
-  opacity: 0.7;
+
+  p {
+    margin: 0;
+    opacity: 0.7;
+  }
 }
 
 .pago-hint {
@@ -54,6 +75,12 @@
 
 .accion-pago {
   margin-right: 4px;
+}
+
+.accion-aviso {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  margin-left: 4px;
 }
 
 .estado-chip,
@@ -91,6 +118,12 @@
   color: var(--mat-sys-on-error-container);
 }
 
+.estado-no_asistio {
+  background: var(--mat-sys-surface-container-highest);
+  color: var(--mat-sys-on-surface-variant);
+  text-decoration: line-through;
+}
+
 .pago-sin_pago {
   background: var(--mat-sys-surface-container-highest);
   color: var(--mat-sys-on-surface-variant);
@@ -113,4 +146,48 @@
 
 mat-paginator {
   margin-top: 16px;
+}
+
+/* Mobile: one card per reservation instead of a 9-column table. */
+@media (max-width: 720px) {
+  .table-wrap {
+    border: none;
+    overflow: visible;
+  }
+
+  .reserva-table {
+    thead {
+      display: none;
+    }
+
+    tr.mat-mdc-row {
+      display: block;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 12px;
+    }
+
+    td.mat-mdc-cell {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 6px 0;
+      border: none;
+      text-align: right;
+
+      &::before {
+        content: attr(data-label);
+        font-weight: 600;
+        text-align: left;
+        opacity: 0.65;
+      }
+    }
+
+    td.acciones {
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+  }
 }

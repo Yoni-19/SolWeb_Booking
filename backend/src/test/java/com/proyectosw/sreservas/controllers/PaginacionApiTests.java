@@ -39,7 +39,7 @@ class PaginacionApiTests {
 
     @Test
     void elListadoDeReservasDevuelveMetadatosDePaginacion() throws Exception {
-        Cookie sesion = cookieDe("admin@email.com");
+        Cookie sesion = cookieDe("recepcion@email.com");
         // La base de demo puede estar vacia: la pagina necesita al menos una fila.
         crearReserva(sesion, 1);
         crearReserva(sesion, 2);
@@ -85,6 +85,38 @@ class PaginacionApiTests {
     }
 
     @Test
+    void laDisponibilidadDevuelveLaFranjaReservada() throws Exception {
+        Cookie sesion = cookieDe("recepcion@email.com");
+        // Fecha lejana y hora fija: no choca con el resto de los tests ni con el seed.
+        LocalDateTime inicio = LocalDateTime.now().plusYears(7)
+                .withHour(9).withMinute(0).withSecond(0).withNano(0);
+        mockMvc.perform(post("/api/reservas")
+                        .cookie(sesion)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fechaHoraInicio":"%s","fechaHoraFin":"%s","canchaId":1,"usuarioId":2}
+                                """.formatted(inicio, inicio.plusHours(1))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/reservas/disponibilidad")
+                        .param("canchaId", "1")
+                        .param("fecha", inicio.toLocalDate().toString())
+                        .cookie(sesion))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.inicio == '%s')]".formatted(inicio + ":00")).isNotEmpty());
+    }
+
+    @Test
+    void laBusquedaDeUsuariosFiltraPorCorreo() throws Exception {
+        Cookie sesion = cookieDe("admin@email.com");
+
+        mockMvc.perform(get("/api/usuarios").param("q", "laura@email.com").cookie(sesion))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].correo").value("laura@email.com"));
+    }
+
+    @Test
     void elContratoOpenApiEsPublicoYDeclaraLosEsquemasDeAutenticacion() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
@@ -96,7 +128,7 @@ class PaginacionApiTests {
                 .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"));
     }
 
-    /** El ADMIN reserva para Laura (id 2 del seed) en una fecha futura y sin solaparse. */
+    /** La recepcion reserva para Laura (id 2 del seed) en una fecha futura y sin solaparse. */
     private void crearReserva(Cookie sesion, int dias) throws Exception {
         LocalDateTime inicio = LocalDateTime.now().plusYears(6).plusDays(dias)
                 .withHour(10).withMinute(0).withSecond(0).withNano(0);

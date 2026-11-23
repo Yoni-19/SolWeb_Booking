@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { API_BASE } from '../../core/api.constants';
 import { Pagina } from '../../core/models/pagina.model';
-import { EstadoReserva, Reserva, ReservaAlta } from '../../core/models/reserva.model';
+import { EstadoReserva, FranjaOcupada, Reserva, ReservaAlta } from '../../core/models/reserva.model';
 
 /**
  * Real HTTP service — talks to the Spring Boot backend.
@@ -15,15 +15,26 @@ export class ReservaService {
   private readonly url = `${API_BASE}/api/reservas`;
 
   /**
-   * GET /api/reservas?page=&size=&estado= — server-side pagination.
+   * GET /api/reservas?page=&size=&estado=&fecha= — server-side pagination.
    * A CLIENTE only receives their own rows; the backend applies that filter.
+   * `fecha` is a local "yyyy-MM-dd" that keeps only reservations starting that day.
    */
-  list(page = 0, size = 10, estado?: EstadoReserva): Observable<Pagina<Reserva>> {
+  list(page = 0, size = 10, estado?: EstadoReserva, fecha?: string): Observable<Pagina<Reserva>> {
     const params: Record<string, string | number> = { page, size, sort: 'id,desc' };
     if (estado) {
       params['estado'] = estado;
     }
+    if (fecha) {
+      params['fecha'] = fecha;
+    }
     return this.http.get<Pagina<Reserva>>(this.url, { params });
+  }
+
+  /** GET /api/reservas/disponibilidad?canchaId=&fecha=yyyy-MM-dd — franjas ya tomadas. */
+  disponibilidad(canchaId: number, fecha: string): Observable<FranjaOcupada[]> {
+    return this.http.get<FranjaOcupada[]>(`${this.url}/disponibilidad`, {
+      params: { canchaId, fecha },
+    });
   }
 
   get(id: number): Observable<Reserva | undefined> {

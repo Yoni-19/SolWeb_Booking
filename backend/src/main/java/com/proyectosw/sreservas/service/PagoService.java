@@ -110,6 +110,10 @@ public class PagoService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "La reserva ya está completada");
         }
+        if (reserva.getEstadoReserva() == EstadoReserva.NO_ASISTIO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La reserva figura como no asistida");
+        }
 
         Optional<Pago> existenteOpt = repository.findByReserva_Id(reserva.getId());
         BigDecimal total = reserva.getMontoTotal();
@@ -129,6 +133,11 @@ public class PagoService {
                         "El cliente solo puede abonar la seña del 50% o el total de la reserva");
             }
         } else {
+            // El saldo final solo se cobra con la reserva ya iniciada (check-in).
+            if (existenteOpt.isPresent() && reserva.getEstadoReserva() != EstadoReserva.EN_CURSO) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Iniciá la reserva (check-in) antes de cobrar el saldo");
+            }
             if (existenteOpt.isEmpty() && pago.getMonto().compareTo(senia) < 0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "La primera entrega debe cubrir al menos el 50% del total");

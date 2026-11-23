@@ -2,10 +2,12 @@ package com.proyectosw.sreservas.config;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,6 +40,9 @@ import jakarta.servlet.http.HttpServletResponse;
 public class SecurityConfig {
 
     private final JwtAuthFilter filter;
+
+    @Value("${application.cors.allowed-origins:http://localhost:4200,http://127.0.0.1:4200}")
+    private String allowedOrigins;
 
     public SecurityConfig(final JwtAuthFilter filter) {
         this.filter = filter;
@@ -74,16 +79,18 @@ public class SecurityConfig {
                 .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/canchas/**").authenticated()
                 .requestMatchers("/api/canchas/**").hasRole("ADMIN")
-                // El CLIENTE solo reprograma o cancela SUS reservas: la propiedad se valida en ReservaService.
-                .requestMatchers(HttpMethod.PUT, "/api/reservas/**").hasAnyRole("ADMIN", "RECEPCIONISTA", "CLIENTE")
+                // El ADMIN consulta el historial pero no opera: no crea, no reprograma,
+                // no hace check-in/out ni cobra. El CLIENTE solo toca SUS reservas.
+                .requestMatchers(HttpMethod.GET, "/api/reservas/**").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/reservas/**").hasAnyRole("RECEPCIONISTA", "CLIENTE")
                 .requestMatchers(HttpMethod.DELETE, "/api/reservas/**").hasAnyRole("ADMIN", "RECEPCIONISTA", "CLIENTE")
-                // Check-in / check-out: solo personal. El CLIENTE tambien entra por aca para
+                // Check-in / check-out: solo recepcion. El CLIENTE tambien entra por aca para
                 // cancelar, pero ReservaService lo limita al dueno y solo permite CANCELADA.
-                .requestMatchers(HttpMethod.PATCH, "/api/reservas/*/estado").hasAnyRole("ADMIN", "RECEPCIONISTA", "CLIENTE")
-                .requestMatchers("/api/reservas/**").hasAnyRole("ADMIN", "RECEPCIONISTA", "CLIENTE")
+                .requestMatchers(HttpMethod.PATCH, "/api/reservas/*/estado").hasAnyRole("RECEPCIONISTA", "CLIENTE")
+                .requestMatchers("/api/reservas/**").hasAnyRole("RECEPCIONISTA", "CLIENTE")
                 // El CLIENTE puede pagar la seña o el total de SU reserva; PagoService valida
                 // propiedad, monto y que no exista un pago previo. El resto de pagos es del personal.
-                .requestMatchers(HttpMethod.POST, "/api/pagos").hasAnyRole("ADMIN", "RECEPCIONISTA", "CLIENTE")
+                .requestMatchers(HttpMethod.POST, "/api/pagos").hasAnyRole("RECEPCIONISTA", "CLIENTE")
                 .requestMatchers("/api/pagos/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
                 .anyRequest().authenticated())
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -95,7 +102,10 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200", "http://127.0.0.1:4200"));
+        configuration.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
         configuration.setExposedHeaders(List.of("Authorization"));
