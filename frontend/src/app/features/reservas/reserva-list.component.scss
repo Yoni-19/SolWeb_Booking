@@ -169,6 +169,7 @@ mat-paginator {
 
     tr.mat-mdc-row {
       display: block;
+      height: auto;
       margin-bottom: 12px;
       padding: 8px 12px;
       border: 1px solid var(--mat-sys-outline-variant);
