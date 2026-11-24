@@ -36,23 +36,23 @@
     <table mat-table [dataSource]="clientes()" class="cliente-table">
       <ng-container matColumnDef="id">
         <th mat-header-cell *matHeaderCellDef>#</th>
-        <td mat-cell *matCellDef="let c">{{ c.id }}</td>
+        <td mat-cell *matCellDef="let c" data-label="#">{{ c.id }}</td>
       </ng-container>
 
       <ng-container matColumnDef="nombre">
         <th mat-header-cell *matHeaderCellDef>Nombre completo</th>
-        <td mat-cell *matCellDef="let c">{{ c.nombres }} {{ c.apellidos }}</td>
+        <td mat-cell *matCellDef="let c" data-label="Nombre completo">{{ c.nombres }} {{ c.apellidos }}</td>
       </ng-container>
 
       <ng-container matColumnDef="correo">
         <th mat-header-cell *matHeaderCellDef>Correo</th>
-        <td mat-cell *matCellDef="let c">{{ c.correo }}</td>
+        <td mat-cell *matCellDef="let c" data-label="Correo">{{ c.correo }}</td>
       </ng-container>
 
       @if (puedeGestionar()) {
         <ng-container matColumnDef="acciones">
           <th mat-header-cell *matHeaderCellDef>Acciones</th>
-          <td mat-cell *matCellDef="let c">
+          <td mat-cell *matCellDef="let c" class="acciones" data-label="Acciones">
             <a mat-icon-button [routerLink]="['/clientes', c.id, 'editar']" aria-label="Editar" matTooltip="Editar cliente">
               <mat-icon>edit</mat-icon>
             </a>

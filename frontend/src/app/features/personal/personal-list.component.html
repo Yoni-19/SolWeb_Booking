@@ -34,22 +34,22 @@
     <table mat-table [dataSource]="personal()" class="personal-table">
       <ng-container matColumnDef="id">
         <th mat-header-cell *matHeaderCellDef>#</th>
-        <td mat-cell *matCellDef="let u">{{ u.id }}</td>
+        <td mat-cell *matCellDef="let u" data-label="#">{{ u.id }}</td>
       </ng-container>
 
       <ng-container matColumnDef="nombre">
         <th mat-header-cell *matHeaderCellDef>Nombre completo</th>
-        <td mat-cell *matCellDef="let u">{{ u.nombres }} {{ u.apellidos }}</td>
+        <td mat-cell *matCellDef="let u" data-label="Nombre completo">{{ u.nombres }} {{ u.apellidos }}</td>
       </ng-container>
 
       <ng-container matColumnDef="correo">
         <th mat-header-cell *matHeaderCellDef>Correo</th>
-        <td mat-cell *matCellDef="let u">{{ u.correo }}</td>
+        <td mat-cell *matCellDef="let u" data-label="Correo">{{ u.correo }}</td>
       </ng-container>
 
       <ng-container matColumnDef="rol">
         <th mat-header-cell *matHeaderCellDef>Rol</th>
-        <td mat-cell *matCellDef="let u">
+        <td mat-cell *matCellDef="let u" data-label="Rol">
           <mat-select
             class="rol-select"
             [value]="u.rol"
@@ -66,7 +66,7 @@
 
       <ng-container matColumnDef="acciones">
         <th mat-header-cell *matHeaderCellDef>Acciones</th>
-        <td mat-cell *matCellDef="let u">
+        <td mat-cell *matCellDef="let u" class="acciones" data-label="Acciones">
           <a mat-icon-button [routerLink]="['/personal', u.id, 'editar']" aria-label="Editar" matTooltip="Editar trabajador">
             <mat-icon>edit</mat-icon>
           </a>

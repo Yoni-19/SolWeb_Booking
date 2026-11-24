@@ -1,5 +1,6 @@
 .layout {
   height: 100vh;
+  height: 100dvh;
 }
 
 .layout-sidenav {
@@ -28,6 +29,10 @@
   font-size: 0.875rem;
   opacity: 0.8;
   margin-right: 8px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toolbar-rol {
@@ -36,6 +41,13 @@
 
   @media (max-width: 600px) {
     display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .toolbar-user {
+    max-width: 130px;
+    font-size: 0.8rem;
   }
 }
 

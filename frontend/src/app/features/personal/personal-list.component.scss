@@ -42,3 +42,61 @@
   width: 170px;
   font-size: 0.875rem;
 }
+
+/* Mobile: one card per worker instead of a 5-column table. */
+@media (max-width: 720px) {
+  .table-wrap {
+    border: none;
+    overflow: visible;
+  }
+
+  .personal-table {
+    thead {
+      display: none;
+    }
+
+    tr.mat-mdc-row {
+      display: block;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 12px;
+    }
+
+    td.mat-mdc-cell {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 6px 0;
+      border: none;
+      text-align: right;
+
+      &::before {
+        content: attr(data-label);
+        font-weight: 600;
+        text-align: left;
+        opacity: 0.65;
+      }
+    }
+
+    td.acciones {
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+  }
+
+  .rol-select {
+    width: 160px;
+  }
+}
+
+@media (max-width: 600px) {
+  .buscador {
+    justify-content: flex-start;
+
+    mat-form-field {
+      width: 100%;
+    }
+  }
+}
