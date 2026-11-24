@@ -51,8 +51,15 @@
   }
 
   .cliente-table {
-    thead {
+    display: block;
+    width: 100%;
+
+    ::ng-deep thead {
       display: none;
+    }
+
+    ::ng-deep tbody {
+      display: block;
     }
 
     tr.mat-mdc-row {
