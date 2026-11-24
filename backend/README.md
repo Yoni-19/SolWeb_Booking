@@ -264,7 +264,8 @@ JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=70 -XX:+UseSerialGC
 
 - Root Directory: `frontend`.
 - `frontend/vercel.json` proxea `/api/:path*` a Render y hace fallback de SPA a `/index.html`.
-- Reemplazar `TU-APP.onrender.com` por la URL real de Render.
+- La URL real del backend es `https://complejo-api-xcb4.onrender.com`; si el servicio de Render
+  se recrea, actualizar `destination` en `vercel.json`.
 - `environment.prod.ts` define `apiBase: ''`, así el frontend pega relativo a `/api`.
 
 ### Orden de despliegue

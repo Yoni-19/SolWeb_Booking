@@ -27,9 +27,9 @@ más pruebas manuales contra la API.
 ## Despliegue en Vercel
 
 - Root Directory: `frontend`.
-- `vercel.json` proxea `/api/:path*` a `https://TU-APP.onrender.com/api/:path*` y hace
-  fallback de las rutas SPA a `/index.html`.
-- Reemplazar `TU-APP.onrender.com` por la URL real de Render.
+- `vercel.json` proxea `/api/:path*` a `https://complejo-api-xcb4.onrender.com/api/:path*` y
+  hace fallback de las rutas SPA a `/index.html`.
+- Si el servicio de Render se recrea, actualizar `destination` en `vercel.json`.
 - El build de producción usa `environment.prod.ts` (`apiBase: ''`): los services pegan relativo
   a `/api` y el proxy de Vercel evita CORS, manteniendo la cookie `SameSite=Strict` como mismo
   origen.
