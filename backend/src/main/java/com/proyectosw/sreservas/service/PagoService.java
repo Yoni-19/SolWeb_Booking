@@ -2,6 +2,7 @@ package com.proyectosw.sreservas.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -42,12 +43,14 @@ public class PagoService {
     private final PagoRepository repository;
     private final ReservaRepository reservaRepository;
     private final CurrentUserService currentUser;
+    private final Clock reloj;
 
     public PagoService(final PagoRepository repository, final ReservaRepository reservaRepository,
-            final CurrentUserService currentUser) {
+            final CurrentUserService currentUser, final Clock reloj) {
         this.repository = repository;
         this.reservaRepository = reservaRepository;
         this.currentUser = currentUser;
+        this.reloj = reloj;
     }
 
     public List<Pago> listarTodos() {
@@ -152,7 +155,7 @@ public class PagoService {
         pagoFinal.setReserva(reserva);
         pagoFinal.setMetodoPago(pago.getMetodoPago());
         pagoFinal.setMonto(nuevoTotal);
-        pagoFinal.setFechaPago(LocalDateTime.now());
+        pagoFinal.setFechaPago(LocalDateTime.now(reloj));
         pagoFinal.setEstadoPago(nuevoTotal.compareTo(total) >= 0
                 ? EstadoPago.PAGADO
                 : EstadoPago.PARCIAL);

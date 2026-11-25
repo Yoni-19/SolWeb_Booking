@@ -83,13 +83,20 @@
                     type="button"
                     class="slot"
                     [class.slot-ocupado]="slot.ocupado"
+                    [class.slot-pasado]="slot.pasado"
                     [class.slot-seleccionado]="slot.seleccionado"
-                    [disabled]="slot.ocupado"
-                    [matTooltip]="slot.ocupado ? 'Ocupado' : 'Libre de ' + slot.hora + ' a ' + slot.fin"
+                    [disabled]="slot.ocupado || slot.pasado"
+                    [matTooltip]="slot.pasado
+                      ? 'La hora ya pasó'
+                      : slot.ocupado
+                        ? 'Ocupado'
+                        : 'Libre de ' + slot.hora + ' a ' + slot.fin"
                     (click)="elegirSlot(slot)"
                   >
                     <span class="slot-hora">{{ slot.hora }}</span>
-                    <span class="slot-estado">{{ slot.ocupado ? 'Ocupado' : 'Libre' }}</span>
+                    <span class="slot-estado">{{
+                      slot.pasado ? 'No disponible' : slot.ocupado ? 'Ocupado' : 'Libre'
+                    }}</span>
                   </button>
                 }
               </div>

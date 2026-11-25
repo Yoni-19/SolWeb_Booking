@@ -1,6 +1,7 @@
 package com.proyectosw.sreservas.service;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -44,15 +45,17 @@ public class ReservaService {
     private final UsuarioRepository usuarioRepository;
     private final PagoRepository pagoRepository;
     private final CurrentUserService currentUser;
+    private final Clock reloj;
 
     public ReservaService(final ReservaRepository repository, final CanchaRepository canchaRepository,
             final UsuarioRepository usuarioRepository, final PagoRepository pagoRepository,
-            final CurrentUserService currentUser) {
+            final CurrentUserService currentUser, final Clock reloj) {
         this.repository = repository;
         this.canchaRepository = canchaRepository;
         this.usuarioRepository = usuarioRepository;
         this.pagoRepository = pagoRepository;
         this.currentUser = currentUser;
+        this.reloj = reloj;
     }
 
     /**
@@ -64,7 +67,7 @@ public class ReservaService {
     @Transactional
     public Page<Reserva> listarTodos(Pageable pageable, EstadoReserva estado, LocalDate fecha) {
         // Antes de listar, las confirmadas ya vencidas pasan a NO_ASISTIO.
-        repository.marcarNoAsistio(EstadoReserva.CONFIRMADA, EstadoReserva.NO_ASISTIO, LocalDateTime.now());
+        repository.marcarNoAsistio(EstadoReserva.CONFIRMADA, EstadoReserva.NO_ASISTIO, LocalDateTime.now(reloj));
 
         Usuario actual = currentUser.get();
         boolean esCliente = Rol.CLIENTE.equals(actual.getRol());
@@ -226,11 +229,11 @@ public class ReservaService {
 
         if (destino == EstadoReserva.EN_CURSO) {
             // El check-in solo se hace el mismo dia y antes de que termine la reserva.
-            if (!existente.getFechaHoraInicio().toLocalDate().equals(LocalDate.now())) {
+            if (!existente.getFechaHoraInicio().toLocalDate().equals(LocalDate.now(reloj))) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Solo se puede realizar el check-in el mismo día de la reserva");
             }
-            if (!existente.getFechaHoraFin().isAfter(LocalDateTime.now())) {
+            if (!existente.getFechaHoraFin().isAfter(LocalDateTime.now(reloj))) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "El horario de la reserva ya finalizó");
             }
@@ -274,6 +277,10 @@ public class ReservaService {
 
     /** Solo se reserva dentro del horario de atencion (08:00 a 22:00), el mismo dia. */
     private void verificarHorarioAtencion(LocalDateTime inicio, LocalDateTime fin) {
+        if (!inicio.isAfter(LocalDateTime.now(reloj))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La fecha y hora de inicio debe ser posterior al momento actual");
+        }
         if (!inicio.toLocalDate().equals(fin.toLocalDate())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "La reserva debe empezar y terminar el mismo día");

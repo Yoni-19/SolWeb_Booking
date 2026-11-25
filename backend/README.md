@@ -255,10 +255,16 @@ CORS_ALLOWED_ORIGINS=https://<app>.vercel.app
 DDL_AUTO=update
 SQL_INIT_MODE=always
 DB_POOL_SIZE=5
+APP_TIMEZONE=America/Lima
 JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=70 -XX:+UseSerialGC
 ```
 
 `PORT` lo inyecta Render; no lo setees. El seed corre en cada arranque y es idempotente.
+
+`APP_TIMEZONE` define la zona del complejo con la que el backend valida los horarios de
+reserva, el check-in y la fecha de pago. Si no se define, el valor por defecto es
+`America/Lima`: Render corre en UTC y sin esa zona una reserva de la tarde se vería como
+"pasada".
 
 ### Vercel
 

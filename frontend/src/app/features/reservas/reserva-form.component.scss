@@ -119,6 +119,14 @@
   opacity: 0.85;
 }
 
+.slot-pasado {
+  background: color-mix(in srgb, var(--mat-sys-surface-variant) 70%, white);
+  color: var(--mat-sys-on-surface-variant);
+  border-color: transparent;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .slot-seleccionado {
   border-color: var(--mat-sys-primary);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--mat-sys-primary) 35%, transparent);

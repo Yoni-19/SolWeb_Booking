@@ -6,7 +6,6 @@ import com.proyectosw.sreservas.model.Cancha;
 import com.proyectosw.sreservas.model.Reserva;
 import com.proyectosw.sreservas.model.Usuario;
 
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
 
 /**
@@ -20,7 +19,6 @@ import jakarta.validation.constraints.NotNull;
  */
 public record ReservaRequest(
         @NotNull(message = "La fecha y hora de inicio es obligatoria")
-        @Future(message = "La fecha de inicio no puede ser anterior a hoy")
         LocalDateTime fechaHoraInicio,
 
         @NotNull(message = "La fecha y hora de fin es obligatoria")

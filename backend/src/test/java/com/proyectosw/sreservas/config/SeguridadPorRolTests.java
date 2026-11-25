@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -352,9 +353,11 @@ class SeguridadPorRolTests {
      * exige el mismo dia y un horario que todavia no haya terminado.
      */
     private int crearReserva(Cookie sesion) throws Exception {
+        // Mismo reloj que el negocio: el check-in exige hoy en la zona del complejo.
+        ZoneId zona = ZoneId.of("America/Lima");
         for (int hora = 21; hora >= 8; hora--) {
-            LocalDateTime inicio = LocalDate.now().atTime(hora, 0);
-            if (!inicio.plusHours(1).isAfter(LocalDateTime.now())) {
+            LocalDateTime inicio = LocalDate.now(zona).atTime(hora, 0);
+            if (!inicio.plusHours(1).isAfter(LocalDateTime.now(zona))) {
                 continue;
             }
             MvcResult intento = mockMvc.perform(post("/api/reservas")

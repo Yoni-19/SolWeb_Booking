@@ -10,14 +10,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -52,8 +54,18 @@ class ReservaServiceTests {
     @Mock
     private CurrentUserService currentUser;
 
-    @InjectMocks
+    /** Reloj fijo en la zona del complejo para que las reglas temporales no dependan del dia real. */
+    private static final ZoneId ZONA = ZoneId.of("America/Lima");
+    private static final LocalDateTime AHORA = LocalDateTime.of(2026, 11, 25, 13, 0);
+
     private ReservaService service;
+
+    @BeforeEach
+    void setUp() {
+        Clock reloj = Clock.fixed(AHORA.atZone(ZONA).toInstant(), ZONA);
+        service = new ReservaService(repository, canchaRepository, usuarioRepository,
+                pagoRepository, currentUser, reloj);
+    }
 
     @Test
     void elClienteSoloListaSusPropiasReservas() {
@@ -181,8 +193,8 @@ class ReservaServiceTests {
         Reserva confirmada = reservaDe(2);
         confirmada.setEstadoReserva(EstadoReserva.CONFIRMADA);
         // El check-in exige el mismo dia; el pago faltante se valida despues.
-        confirmada.setFechaHoraInicio(LocalDate.now().atStartOfDay());
-        confirmada.setFechaHoraFin(LocalDate.now().atTime(23, 59, 59));
+        confirmada.setFechaHoraInicio(AHORA.toLocalDate().atStartOfDay());
+        confirmada.setFechaHoraFin(AHORA.toLocalDate().atTime(23, 59, 59));
         when(repository.findById(5)).thenReturn(Optional.of(confirmada));
         when(pagoRepository.findByReserva_Id(5)).thenReturn(Optional.empty());
 
@@ -252,6 +264,35 @@ class ReservaServiceTests {
                 .thenReturn(List.of(reservaDe(2)));
 
         assertThat(service.listarOcupadas(1, fecha)).hasSize(1);
+    }
+
+    @Test
+    void aceptaUnInicioFuturoDelMismoDia() {
+        when(currentUser.get()).thenReturn(usuario(2, Rol.CLIENTE));
+        when(canchaRepository.findById(1)).thenReturn(Optional.of(canchaActiva()));
+        when(repository.save(any(Reserva.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Reserva reserva = reservaPara(1, null);
+        reserva.setFechaHoraInicio(AHORA.toLocalDate().atTime(16, 0));
+        reserva.setFechaHoraFin(AHORA.toLocalDate().atTime(17, 0));
+
+        assertThat(service.crear(reserva).getEstadoReserva()).isEqualTo(EstadoReserva.PENDIENTE);
+    }
+
+    @Test
+    void rechazaUnInicioQueYaPaso() {
+        when(currentUser.get()).thenReturn(usuario(2, Rol.CLIENTE));
+        when(canchaRepository.findById(1)).thenReturn(Optional.of(canchaActiva()));
+
+        Reserva reserva = reservaPara(1, null);
+        reserva.setFechaHoraInicio(AHORA.toLocalDate().atTime(9, 0));
+        reserva.setFechaHoraFin(AHORA.toLocalDate().atTime(10, 0));
+
+        assertThatThrownBy(() -> service.crear(reserva))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(repository, never()).save(any(Reserva.class));
     }
 
     private Usuario usuario(Integer id, Rol rol) {

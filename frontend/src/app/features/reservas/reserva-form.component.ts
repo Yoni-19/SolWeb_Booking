@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, merge } from 'rxjs';
 import { apiErrorMessage } from '../../core/http/api-error';
+import { ahoraEnComplejo } from '../../core/zona-negocio';
 import { Cancha } from '../../core/models/cancha.model';
 import { Cliente } from '../../core/models/cliente.model';
 import { MetodoPago } from '../../core/models/pago.model';
@@ -72,6 +73,8 @@ interface SlotHorario {
   hora: string;
   fin: string;
   ocupado: boolean;
+  /** La franja de hoy ya empezo (o termino): no se puede reservar. */
+  pasado: boolean;
   seleccionado: boolean;
 }
 
@@ -101,12 +104,8 @@ export class ReservaFormComponent {
   /** Ventana de atencion del complejo: misma que valida el backend. */
   readonly HORA_APERTURA = 8;
   readonly HORA_CIERRE = 22;
-  /** Las reservas no pueden empezar antes de hoy. */
-  readonly minFecha = (() => {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    return hoy;
-  })();
+  /** Fecha minima elegible: hoy en la zona del complejo. */
+  readonly minFecha = new Date(`${ahoraEnComplejo().fecha}T00:00:00`);
   /** Estado actual de la reserva; el backend lo calcula y no se puede enviar. */
   readonly estadoActual = signal<EstadoReserva | null>(null);
   /** Franjas ya tomadas de la cancha elegida en el dia elegido. */
@@ -226,8 +225,14 @@ export class ReservaFormComponent {
       return;
     }
 
-    if (fecha < this.minFecha) {
+    const ahora = ahoraEnComplejo();
+    const diaElegido = toLocalDate(fecha);
+    if (diaElegido < ahora.fecha) {
       this.errorMessage.set('La fecha no puede ser anterior a hoy');
+      return;
+    }
+    if (diaElegido === ahora.fecha && inicioMin <= ahora.minutos) {
+      this.errorMessage.set('La hora de inicio ya pasó');
       return;
     }
 
@@ -352,21 +357,39 @@ export class ReservaFormComponent {
   slots(): SlotHorario[] {
     const { horaInicio } = this.form.getRawValue();
     return Array.from({ length: this.HORA_CIERRE - this.HORA_APERTURA }, (_, i) => {
-      const hora = `${String(this.HORA_APERTURA + i).padStart(2, '0')}:00`;
-      const fin = `${String(this.HORA_APERTURA + i + 1).padStart(2, '0')}:00`;
-      return { hora, fin, ocupado: this.slotOcupado(this.HORA_APERTURA + i), seleccionado: horaInicio === hora };
+      const horaNum = this.HORA_APERTURA + i;
+      const hora = `${String(horaNum).padStart(2, '0')}:00`;
+      const fin = `${String(horaNum + 1).padStart(2, '0')}:00`;
+      return {
+        hora,
+        fin,
+        ocupado: this.slotOcupado(horaNum),
+        pasado: this.esPasado(horaNum),
+        seleccionado: horaInicio === hora,
+      };
     });
   }
 
   /** Un clic en una franja libre completa el rango; si toca el fin actual, lo extiende. */
   elegirSlot(slot: SlotHorario): void {
-    if (slot.ocupado) return;
+    if (slot.ocupado || slot.pasado) return;
     const { horaFin } = this.form.getRawValue();
     if (horaFin === slot.hora) {
       this.form.patchValue({ horaFin: slot.fin });
       return;
     }
     this.form.patchValue({ horaInicio: slot.hora, horaFin: slot.fin });
+  }
+
+  /** Una franja de hoy ya paso si su inicio no es posterior al momento actual del complejo. */
+  private esPasado(hora: number): boolean {
+    const fecha = this.form.controls.fecha.value;
+    if (fecha == null) return false;
+    const ahora = ahoraEnComplejo();
+    const dia = toLocalDate(fecha);
+    if (dia > ahora.fecha) return false;
+    if (dia < ahora.fecha) return true;
+    return hora * 60 <= ahora.minutos;
   }
 
   private slotOcupado(hora: number): boolean {
