@@ -11,15 +11,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -44,6 +43,7 @@ import tools.jackson.databind.ObjectMapper;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Import(RelojFijo.class)
 class SeguridadPorRolTests {
 
     private static final String CLAVE_SEED = "test123";
@@ -353,11 +353,10 @@ class SeguridadPorRolTests {
      * exige el mismo dia y un horario que todavia no haya terminado.
      */
     private int crearReserva(Cookie sesion) throws Exception {
-        // Mismo reloj que el negocio: el check-in exige hoy en la zona del complejo.
-        ZoneId zona = ZoneId.of("America/Lima");
+        // Mismo reloj que el negocio: el check-in exige hoy y un horario que no haya terminado.
         for (int hora = 21; hora >= 8; hora--) {
-            LocalDateTime inicio = LocalDate.now(zona).atTime(hora, 0);
-            if (!inicio.plusHours(1).isAfter(LocalDateTime.now(zona))) {
+            LocalDateTime inicio = RelojFijo.AHORA.toLocalDate().atTime(hora, 0);
+            if (!inicio.plusHours(1).isAfter(RelojFijo.AHORA)) {
                 continue;
             }
             MvcResult intento = mockMvc.perform(post("/api/reservas")
