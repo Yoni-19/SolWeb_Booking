@@ -54,7 +54,7 @@ Las cuentas del seed usan la clave `test123` y sus roles salen de `data.sql`:
 | `admin@email.com` | `ADMIN` — Admin Sistema |
 | `laura@email.com` | `CLIENTE` — Laura Gomez |
 | `pedro@email.com` | `CLIENTE` — Pedro Diaz |
-| `recepcion@email.com` | `RECEPCIONISTA` — Rocio Recepcion |
+| `rocio@email.com` | `RECEPCIONISTA` — Rocio Recepcion |
 | `entrenador@email.com` | `ENTRENADOR` — Ezequiel Entrenador (rol informativo, no puede iniciar sesión) |
 
 ```powershell

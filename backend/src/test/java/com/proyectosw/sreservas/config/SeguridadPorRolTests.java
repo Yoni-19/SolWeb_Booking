@@ -296,7 +296,7 @@ class SeguridadPorRolTests {
     @Test
     void elClientePagaLaSeniaYElPersonalCobraElSaldoHastaCompletar() throws Exception {
         Cookie laura = cookieDe("laura@email.com", CLAVE_SEED);
-        Cookie recepcion = cookieDe("recepcion@email.com", CLAVE_SEED);
+        Cookie recepcion = cookieDe("rocio@email.com", CLAVE_SEED);
         int id = crearReserva(laura);
 
         String cuerpo = mockMvc.perform(get("/api/reservas/" + id).cookie(laura))

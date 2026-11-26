@@ -5,16 +5,16 @@ INSERT INTO usuario (id, nombres, apellidos, correo, clave, rol) VALUES
   (1, 'Admin', 'Sistema', 'admin@email.com', '$2a$10$QdpRmEnffZjK3RIvTCAKIOA374XrawxGxwPZBN7VsEeGhTc59fDpG', 'ADMIN'),
   (2, 'Laura', 'Gomez', 'laura@email.com', '$2a$10$QdpRmEnffZjK3RIvTCAKIOA374XrawxGxwPZBN7VsEeGhTc59fDpG', 'CLIENTE'),
   (3, 'Pedro', 'Diaz', 'pedro@email.com', '$2a$10$QdpRmEnffZjK3RIvTCAKIOA374XrawxGxwPZBN7VsEeGhTc59fDpG', 'CLIENTE'),
-  (101, 'Rocio', 'Recepcion', 'recepcion@email.com', '$2a$10$QdpRmEnffZjK3RIvTCAKIOA374XrawxGxwPZBN7VsEeGhTc59fDpG', 'RECEPCIONISTA'),
+  (101, 'Rocio', 'Recepcion', 'rocio@email.com', '$2a$10$QdpRmEnffZjK3RIvTCAKIOA374XrawxGxwPZBN7VsEeGhTc59fDpG', 'RECEPCIONISTA'),
   (102, 'Ezequiel', 'Entrenador', 'entrenador@email.com', '$2a$10$QdpRmEnffZjK3RIvTCAKIOA374XrawxGxwPZBN7VsEeGhTc59fDpG', 'ENTRENADOR')
 ON CONFLICT DO NOTHING;
 
--- Correccion de datos: versiones anteriores del seed usaban rocio@email.com
+-- Correccion de datos: versiones anteriores del seed usaban recepcion@email.com
 -- para el id 101. ON CONFLICT DO NOTHING no actualiza filas existentes, asi que
 -- sin este UPDATE las bases ya creadas conservan el correo viejo y el login de
--- recepcion falla.
-UPDATE usuario SET correo = 'recepcion@email.com'
-WHERE id = 101 AND correo = 'rocio@email.com';
+-- rocio falla.
+UPDATE usuario SET correo = 'rocio@email.com'
+WHERE id = 101 AND correo = 'recepcion@email.com';
 
 INSERT INTO cancha (id, nombre, deporte, precio_por_hora, activa) VALUES
   (1, 'Cancha Futbol 1', 'FUTBOL', 70.00, true),

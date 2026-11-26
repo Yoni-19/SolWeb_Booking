@@ -39,7 +39,7 @@ class PaginacionApiTests {
 
     @Test
     void elListadoDeReservasDevuelveMetadatosDePaginacion() throws Exception {
-        Cookie sesion = cookieDe("recepcion@email.com");
+        Cookie sesion = cookieDe("rocio@email.com");
         // La base de demo puede estar vacia: la pagina necesita al menos una fila.
         crearReserva(sesion, 1);
         crearReserva(sesion, 2);
@@ -86,7 +86,7 @@ class PaginacionApiTests {
 
     @Test
     void laDisponibilidadDevuelveLaFranjaReservada() throws Exception {
-        Cookie sesion = cookieDe("recepcion@email.com");
+        Cookie sesion = cookieDe("rocio@email.com");
         // Fecha lejana y hora fija: no choca con el resto de los tests ni con el seed.
         LocalDateTime inicio = LocalDateTime.now().plusYears(7)
                 .withHour(9).withMinute(0).withSecond(0).withNano(0);
